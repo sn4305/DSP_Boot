@@ -8,7 +8,8 @@ PAGE 0 :  /* Program Memory */
    BEGIN           	: origin = 0x080000, length = 0x000002
    RAMM0           	: origin = 0x000122, length = 0x0002DE
    RAMD0           	: origin = 0x00B000, length = 0x000800
-   RAMLS0          	: origin = 0x008000, length = 0x000800
+   UPDATE_FLAG      : origin = 0x008000, length = 0x000002  /* Boot flag, updated by app when jump from app to boot */
+   RAMLS0          	: origin = 0x008002, length = 0x0007FE
    RAMLS1          	: origin = 0x008800, length = 0x000800
    RAMLS2      		: origin = 0x009000, length = 0x000800
    RAMLS3      		: origin = 0x009800, length = 0x000800
@@ -17,21 +18,27 @@ PAGE 0 :  /* Program Memory */
    RAMGS15     		: origin = 0x01B000, length = 0x001000
    RESET           	: origin = 0x3FFFC0, length = 0x000002
    
-   /* Flash sectors */
-   FLASHA           : origin = 0x080002, length = 0x001FFE	/* on-chip Flash */
+   /* Flash BANK0 sectors */
+   FLASHA           : origin = 0x080002, length = 0x001FFE	/* on-chip Flash, Bootloader program start */
    FLASHB           : origin = 0x082000, length = 0x002000	/* on-chip Flash */
    FLASHC           : origin = 0x084000, length = 0x002000	/* on-chip Flash */
-   FLASHD           : origin = 0x086000, length = 0x002000	/* on-chip Flash */
-   FLASHE           : origin = 0x088000, length = 0x008000	/* on-chip Flash */
+   FLASHD           : origin = 0x086000, length = 0x001FFC	/* on-chip Flash */
+   BOOT_PN          : origin = 0x087FFC, length = 0x000003  /* bootloader software version, 5 valid bytes */
+   BOOT_CRC         : origin = 0x087FFF, length = 0x000001  /* bootloader CRC, not used */
+   FLASHE           : origin = 0x088000, length = 0x008000	/* on-chip Flash, Application program start */
    FLASHF           : origin = 0x090000, length = 0x008000	/* on-chip Flash */
    FLASHG           : origin = 0x098000, length = 0x008000	/* on-chip Flash */
    FLASHH           : origin = 0x0A0000, length = 0x008000	/* on-chip Flash */
    FLASHI           : origin = 0x0A8000, length = 0x008000	/* on-chip Flash */
-   FLASHJ           : origin = 0x0B0000, length = 0x008000	/* on-chip Flash */
-   FLASHK           : origin = 0x0B8000, length = 0x002000	/* on-chip Flash */
+   FLASHJ           : origin = 0x0B0000, length = 0x007FFC	/* on-chip Flash */
+   APP_PN           : origin = 0x0B7FFC, length = 0x000003	/* Application software version, 5 valid bytes */
+   APP_CRC          : origin = 0x0B7FFF, length = 0x000001  /* Application CRC */
+   APP_VAILID       : origin = 0x0B8000, length = 0x000002	/* Application software vaild flag(2 x 16bit) */
+   FLASHK           : origin = 0x0B8002, length = 0x001FFE	/* on-chip Flash */
    FLASHL           : origin = 0x0BA000, length = 0x002000	/* on-chip Flash */
    FLASHM           : origin = 0x0BC000, length = 0x002000	/* on-chip Flash */
    FLASHN           : origin = 0x0BE000, length = 0x002000	/* on-chip Flash */
+   /* Flash BANK1 sectors, not used */
    FLASHO           : origin = 0x0C0000, length = 0x002000	/* on-chip Flash */
    FLASHP           : origin = 0x0C2000, length = 0x002000	/* on-chip Flash */
    FLASHQ           : origin = 0x0C4000, length = 0x002000	/* on-chip Flash */   
@@ -77,14 +84,14 @@ PAGE 1 : /* Data Memory */
 SECTIONS
 {
    /* Allocate program areas: */
-   .cinit              : > FLASHB      PAGE = 0, ALIGN(4)
-   .pinit              : > FLASHB,     PAGE = 0, ALIGN(4)
-   .text               : >> FLASHB | FLASHC | FLASHD | FLASHE      PAGE = 0, ALIGN(4)
+   .cinit              : > FLASHA      PAGE = 0, ALIGN(4)
+   .pinit              : > FLASHA,     PAGE = 0, ALIGN(4)
+   .text               : >> FLASHA | FLASHB | FLASHC | FLASHD      PAGE = 0, ALIGN(4)
    codestart           : > BEGIN       PAGE = 0, ALIGN(4)
 
 #ifdef __TI_COMPILER_VERSION__
    #if __TI_COMPILER_VERSION__ >= 15009000
-    .TI.ramfunc : {} LOAD = FLASHD,
+    .TI.ramfunc : {} LOAD = FLASHA | FLASHB | FLASHC | FLASHD,
                          RUN = RAMLS0 | RAMLS1 | RAMLS2 |RAMLS3,
                          LOAD_START(_RamfuncsLoadStart),
                          LOAD_SIZE(_RamfuncsLoadSize),
@@ -94,7 +101,7 @@ SECTIONS
                          RUN_END(_RamfuncsRunEnd),
                          PAGE = 0, ALIGN(4)
    #else
-   ramfuncs            : LOAD = FLASHD,
+   ramfuncs            : LOAD = FLASHA | FLASHB | FLASHC | FLASHD,
                          RUN = RAMLS0 | RAMLS1 | RAMLS2 |RAMLS3,
                          LOAD_START(_RamfuncsLoadStart),
                          LOAD_SIZE(_RamfuncsLoadSize),
@@ -112,9 +119,12 @@ SECTIONS
    .esysmem            : > RAMLS5       PAGE = 1
 
    /* Initalized sections go in Flash */
-   .econst             : >> FLASHF | FLASHG | FLASHH      PAGE = 0, ALIGN(4)
-   .switch             : > FLASHB      PAGE = 0, ALIGN(4)
+   .econst             : > FLASHD      PAGE = 0, ALIGN(4)
+   .switch             : > FLASHD      PAGE = 0, ALIGN(4)
    
+   /* user defined sections */
+   .boot_ver           : > BOOT_PN  PAGE = 0
+   .updataflag         : > UPDATE_FLAG  PAGE = 0, TYPE = NOLOAD
    .reset              : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
    
 }

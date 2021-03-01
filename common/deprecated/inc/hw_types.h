@@ -1,8 +1,8 @@
 //###########################################################################
 //
-// FILE:   F28x_Project.h
+// FILE:   hw_types.h
 //
-// TITLE:  F28x Project Headerfile and Examples Include File
+// TITLE:  Type definitions used in ALL driverlib functions.
 //
 //###########################################################################
 // $TI Release: F2837xS Support Library v3.05.00.00 $
@@ -40,19 +40,49 @@
 // $
 //###########################################################################
 
-#ifndef F28X_PROJECT_H
-#define F28X_PROJECT_H
+#ifndef __HW_TYPES_H__
+#define __HW_TYPES_H__
 
+//*****************************************************************************
 //
-// Included Files
+// Define fake 8 bit types for USB related code.
 //
-#include "F2837xS_Cla_typedefs.h"  // F2837xS CLA Type definitions
-#include "F2837xS_device.h"        // F2837xS Headerfile Include File
-#include "F2837xS_Examples.h"      // F2837xS Examples Include File
+//*****************************************************************************
+
+typedef uint16_t uint8_t;
+typedef int16_t int8_t;
+	 
+//*****************************************************************************
+//
+// Macros for hardware access, both direct and via the bit-band region.
+//
+//*****************************************************************************
+#define HWREG(x)                                                              \
+        (*((volatile uint32_t *)(x)))
+#define HWREGH(x)                                                             \
+        (*((volatile uint16_t *)(x)))
+#define HWREGB(x)                                                            \
+        __byte((int *)(x),0)
+//Emulated Bitbanded write        
+#define HWREGBITW(address, mask, value)                                       \
+        (*(volatile uint32_t *)(address)) =                              \
+       ((*(volatile uint32_t *)(address)) & ~((uint32_t)1 << mask)) \
+       | ((uint32_t)value << mask)
+//Emulated Bitbanded read      
+#define HWREGBITR(address, mask)                                              \
+        (((*(volatile uint32_t *)(address)) & ((uint32_t)1 << mask)) >> mask)
+
+//Emulated Bitbanded write
+#define HWREGBITHW(address, mask, value)                                       \
+        (*(volatile uint16_t *)(address)) =                              \
+       ((*(volatile uint16_t *)(address)) & ~((uint16_t)1 << mask)) \
+       | ((uint16_t)value << mask)
+//Emulated Bitbanded read
+#define HWREGBITHR(address, mask)                                              \
+        (((*(volatile uint16_t *)(address)) & ((uint16_t)1 << mask)) >> mask)
 
 
-#endif  // end of F28X_PROJECT_H definition
 
-//
-// End of file
-//
+#endif // __HW_TYPES_H__
+
+

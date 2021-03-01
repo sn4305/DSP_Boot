@@ -53,6 +53,9 @@
 using std::memcpy;
 #endif
 
+#define _FLASH
+#define _LAUNCHXL_F28377S
+
 #define STATUS_FAIL          0
 #define STATUS_SUCCESS       1
 #define TMR1SYSCLKCTR        0xF0000000
