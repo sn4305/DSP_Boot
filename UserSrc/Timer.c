@@ -9,7 +9,10 @@
 #include "F28x_Project.h"
 #include "interrupt.h"
 
-
+/* defined in interrupt.c */
+extern volatile uint16_t u16Tick;
+extern volatile uint16_t u16TimTick;
+extern bool Timer_Start_Flag;
 //
 // Init_Timer - Initialize cpu timer
 //
@@ -24,10 +27,10 @@ void Init_Timer(void)
     InitCpuTimers();
 
     //
-    // Configure CPU-Timer 0 to interrupt every 0.1 second:
-    // 200MHz CPU Freq, 1 second Period (in uSeconds)
+    // Configure CPU-Timer 0 to interrupt every 10ms:
+    // 200MHz CPU Freq, 10ms period.
     //
-    ConfigCpuTimer(&CpuTimer0, 200, 200000);
+    ConfigCpuTimer(&CpuTimer0, 200, 10000);
 //    ConfigCpuTimer(&CpuTimer1, 200, 1000000);
 //    ConfigCpuTimer(&CpuTimer2, 200, 1000000);
 
@@ -55,4 +58,62 @@ void Init_Timer(void)
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
 }
 
+#pragma CODE_SECTION(Get_SysTick,".TI.ramfunc");
+uint16_t Get_SysTick(void)
+{
+    return u16Tick;
+}
 
+#pragma CODE_SECTION(Clr_SysTick,".TI.ramfunc");
+void Clr_SysTick(void)
+{
+    u16Tick = 0;
+}
+
+#pragma CODE_SECTION(TMR_Start,".TI.ramfunc");
+void TMR_Start(void)
+{
+    Timer_Start_Flag = 1;
+}
+
+#pragma CODE_SECTION(TMR_Stop,".TI.ramfunc");
+void TMR_Stop(void)
+{
+    Timer_Start_Flag = 0;
+}
+
+#pragma CODE_SECTION(TMR_SoftwareCounterClear,".TI.ramfunc");
+void TMR_SoftwareCounterClear(void)
+{
+    u16TimTick = 0;
+}
+
+#pragma CODE_SECTION(TMR_SoftwareCounterGet,".TI.ramfunc");
+uint16_t TMR_SoftwareCounterGet(void)
+{
+    return u16TimTick;
+}
+
+#pragma CODE_SECTION(TMR3_Start,".TI.ramfunc");
+void TMR3_Start(void)
+{
+//    Timer3_Start_Flag = 1;
+}
+
+#pragma CODE_SECTION(TMR3_Stop,".TI.ramfunc");
+void TMR3_Stop(void)
+{
+//    Timer3_Start_Flag = 0;
+}
+
+#pragma CODE_SECTION(TMR3_SoftwareCounterGet,".TI.ramfunc");
+uint16_t TMR3_SoftwareCounterGet(void)
+{
+//    return u16Tim3Tick;
+}
+
+#pragma CODE_SECTION(TMR3_SoftwareCounterClear,".TI.ramfunc");
+void TMR3_SoftwareCounterClear(void)
+{
+//    u16Tim3Tick = 0;
+}

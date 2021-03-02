@@ -140,15 +140,41 @@ void InitCanaMbox(void)
     sTXCANMessage.pucMsgData = txMsgData;
 }
 
-void SendModeResponse(uint8_t Mode, uint8_t Config)
+void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config)
 {
     sTXCANMessage.ui32MsgID = DIAG_SESSION;
     sTXCANMessage.ui32MsgLen = 8;
 
-    txMsgData[0] = Mode + (Config << 5);
+    txMsgData[0] = MemoryArea + (Config << 5);
     txMsgData[4] = (DIAGNOSTICSESSION << 6);
 
-    CANMessageSet(CANA_BASE, 2, &sTXCANMessage, MSG_OBJ_TYPE_TX);
+    CANMessageSet(CANA_BASE, ID_TX_DIAG_SESSION, &sTXCANMessage, MSG_OBJ_TYPE_TX);
+}
+
+void SendGenericResponse(uint8_t MemoryArea, uint8_t error)
+{
+    sTXCANMessage.ui32MsgID = GENERAL_RESP;
+    sTXCANMessage.ui32MsgLen = 2;
+
+    txMsgData[0] = MemoryArea;
+    txMsgData[1] = error;
+
+    CANMessageSet(CANA_BASE, ID_TX_GENERAL_RESP, &sTXCANMessage, MSG_OBJ_TYPE_TX);
+}
+
+void SendLogisticResponse(uint8_t MemoryArea, uint8_t* Config, uint8_t DataSize)
+{
+    uint8_t i;
+    sTXCANMessage.ui32MsgID = LOGI_RESP;
+    sTXCANMessage.ui32MsgLen = 8;
+
+    txMsgData[0] = MemoryArea;
+    for (i = 0; i < DataSize; i++)
+    {
+        txMsgData[i+1] = Config[i];
+    }
+
+    CANMessageSet(CANA_BASE, ID_TX_LOGI_RESP, &sTXCANMessage, MSG_OBJ_TYPE_TX);
 }
 
 

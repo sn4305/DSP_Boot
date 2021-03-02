@@ -1,3 +1,18 @@
+/*******************************************************************
+File name:   <main.c>
+Purpose :    <main file>
+Copyright Notice:
+All source code and data contained in this file is Proprietary and
+Confidential to Eaton, and must not be reproduced, transmitted, or
+disclosed; in whole or in part, without the express written permission of Eaton.
+Copyright 2011 - Eaton, All Rights Reserved.
+
+Author              Date               Ver#        Description (CR#)
+Dongdong Yang       20210225           00          Init for Base project 2nd DSP(28377s) Bootloader
+ append log after baseline, especially for milestone or release version, no log is allowed for minor modification
+******************************************************************
+(***).
+*/
 
 #include "main.h"
 
@@ -9,7 +24,7 @@ void Init_Flash_Sectors(void);
 void Init_Timer(void);
 
 BootMachineStates State = State_TRANSITION;
-
+uint16_t s_u16Configuration = 0; //OBC address configuration
 
 /**
  * main.c
@@ -76,8 +91,6 @@ void main(void)
     //
     // Initialize the Flash.
     //
-//    InitFlash_Bank1();
-//    InitFlash_Bank0();
     Init_Flash_Sectors();
 
     //
@@ -94,12 +107,13 @@ void main(void)
     //
     CANEnable(CANA_BASE);
 
-
-
 //    u32UpdataFlag = 0xC0DEFEED;
 
     State = State_TRANSITION;
 
+#ifdef DEMOBOARD
+    State = State_BOOT;
+#endif
     //  ||========================================================||
     //  ||                 Start of State Machine                 ||
     //  ||========================================================||
@@ -112,14 +126,20 @@ void main(void)
             case State_TRANSITION:
                 if( UPDATE_APP_RQST != u32UpdataFlag && APP_VALID ==  APP_VALID_FLAG)
                 {/* FlagAppli is valid, jump to APP*/
+                    TMR_Stop();
+                    TMR_SoftwareCounterClear();
                     StartApplication();
                 }
                 else if(UPDATE_APP_RQST == u32UpdataFlag)
                 {/* received boot request from APP, jump to boot*/
+                    TMR_Start();
+                    TMR_SoftwareCounterClear();
+                    SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
                     State = State_BOOT; // <====== GO BOOT
                 }
                 else
                 {
+                    SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
                     State = State_DEFAULT; // <====== GO DEFAULT
                 }
                 break;
@@ -127,20 +147,97 @@ void main(void)
     //  ||                 STATE: DEFAULT                         ||
     //  ||========================================================||
             case State_DEFAULT:
-#ifdef DEMOBOARD
                 //toggle LED
                 if(CAN_RX_Flag)
                 {
-                    CAN_RX_Flag = 0;
-                    SendModeResponse(5, 0);
+                    Clr_CanRxFlag();
+                    if(g_enumCAN_Command == CMD_ModeRequest )
+                    {
+                        if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
+                        {
+                            u32UpdataFlag = UPDATE_APP_RQST;
+                            SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
+                            State = State_BOOT; // <====== GO BOOT
+                        }
+                        else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                        {
+                            u32UpdataFlag = 0;
+                            RESET();
+                        }
+                    }
                 }
-#endif
+
                 //ClrWdt();
                 break;
     //  ||========================================================||
     //  ||                 STATE: BOOT                            ||
     //  ||========================================================||
             case State_BOOT:
+                if (TMR_SoftwareCounterGet() >= 500)
+                { /*500 * 10ms = 5000ms */
+                    /*5s Timeout*/
+                    u32UpdataFlag = 0;
+                    TMR_SoftwareCounterClear();
+                    RESET();
+                }
+                /*Wait for message*/
+                if(CAN_RX_Flag)
+                {
+                    Clr_CanRxFlag();
+                    TMR_SoftwareCounterClear();
+                    uint8_t error = NO_ERROR;
+                    switch(g_enumCAN_Command)
+                    {
+                        case CMD_ModeRequest:
+                            if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
+                            {/* Enter boot mode request : Send positive Response
+                             * No Action*/
+                                SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
+                            }
+                            else if ((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                            {
+                                /* Go to Default Mode : send response and Reset*/
+                                SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
+                                RESET();
+                            }
+                            else
+                            {
+                                /* Do nothing */
+                            }
+                            break;
+                        case CMD_LogisticRequest:
+                            /* Logistic Request*/
+                            error = IsLogisticValid(g_RXCANMsg);
+                            if (error != 0)
+                            {
+                                /* Error case */
+                                SendGenericResponse(g_u8rxMsgData[0] & 0xE, error);
+                            }
+                            else
+                            {
+                                /* Send response to request */
+                                LogiticRequestHandle(g_u8rxMsgData[0]);
+                            }
+                            break;
+                        case CMD_SecurityAccess:
+                            break;
+                        case CMD_EraseMemory:
+#ifdef DEMOBOARD
+                            WriteLogisticInfo();
+
+#endif
+                            break;
+                        case CMD_TransferInformation:
+                            break;
+                        case CMD_TransferData:
+                            break;
+                        case CMD_CRCRequest:
+                            break;
+                        default:
+                            /* Do Nothing*/
+                            break;
+                    }
+                }/* If CAN frame is received*/
                 break;
 
             default:
@@ -167,10 +264,6 @@ void main(void)
     } // while (1)
 
 }
-
-
-
-
 
 //
 // End of file

@@ -6,16 +6,21 @@
  */
 
 #include "interrupt.h"
-#include "cancom.h"
 
 
-static volatile uint16_t u16Tick = 0;
+/* global variable, only be modified in CAN rx interrupt function and Timer.c */
+volatile uint16_t u16Tick = 0;
+volatile uint16_t u16TimTick = 0;
+bool Timer_Start_Flag = 0;
+
+/* global variable, only be modified in CAN rx interrupt function, and read by main state machine */
 volatile bool CAN_RX_Flag = 0;
+volatile CAN_CMD g_enumCAN_Command = CMD_ModeRequest;
 volatile uint16_t  Can_u16errFlag = 0;
+volatile uint8_t g_u8rxMsgData[8] = {0};
+volatile tCANMsgObject g_RXCANMsg;
 
 #pragma CODE_SECTION(cpu_timer0_isr,".TI.ramfunc");
-#pragma CODE_SECTION(Get_SysTick,".TI.ramfunc");
-#pragma CODE_SECTION(Clr_SysTick,".TI.ramfunc");
 #pragma CODE_SECTION(canaISR,".TI.ramfunc");
 
 //
@@ -25,22 +30,17 @@ __interrupt void cpu_timer0_isr(void)
 {
     DINT;
 
-    u16Tick++;
+    u16Tick++;  /* for test */
+
+    if(Timer_Start_Flag)
+    {/* need consider u16TimTick overflow when use this*/
+        u16TimTick++;
+    }
    //
    // Acknowledge this interrupt to receive more interrupts from group 1
    //
    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
    EINT;
-}
-
-uint16_t Get_SysTick(void)
-{
-    return u16Tick;
-}
-
-void Clr_SysTick(void)
-{
-    u16Tick = 0;
 }
 
 //
@@ -50,9 +50,8 @@ void Clr_SysTick(void)
 __interrupt void
 canaISR(void)
 {
-    __asm("    ESTOP0");
-
     uint32_t status0, status1;
+    uint8_t idx = 0;
 
     //Enable cpu_Timer0 interrupt nest
    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
@@ -101,12 +100,36 @@ canaISR(void)
         // Get the received message
         //
         CANMessageGet(CANA_BASE, status0, &sRXCANMessage, true);
+        /* copy CAN rxmsg to front end buffer which is used in main state machine*/
+        for(idx = 0; idx < 8; idx++)
+        {
+            g_u8rxMsgData[idx] = rxMsgData[idx];
+        }
+        memcpy((void *)&g_RXCANMsg, (const void *)&sRXCANMessage, sizeof(tCANMsgObject));
 
         switch(status0) //Message Obj ID
-        {
+        {  /* judge CANid to see which CAN Command is received*/
            case ID_RX_ModeRequest:
-
-                break;
+               g_enumCAN_Command = CMD_ModeRequest;
+               break;
+           case ID_RX_LogisticRequest:
+               g_enumCAN_Command = CMD_LogisticRequest;
+               break;
+           case ID_RX_SecurityAccess:
+               g_enumCAN_Command = CMD_SecurityAccess;
+               break;
+           case ID_RX_EraseMemory:
+               g_enumCAN_Command = CMD_EraseMemory;
+               break;
+           case ID_RX_TransferInformation:
+               g_enumCAN_Command = CMD_TransferInformation;
+               break;
+           case ID_RX_TransferData:
+               g_enumCAN_Command = CMD_TransferData;
+               break;
+           case ID_RX_CRCRequest:
+               g_enumCAN_Command = CMD_CRCRequest;
+               break;
         }
 
 #ifdef DEMOBOARD

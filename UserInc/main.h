@@ -31,35 +31,26 @@ extern void ExitBoot(uint32 EntryAddr);
 #define FLASH_PAGE_SIZE_HEXA            0x400   /* Considering 512 words per page, and 2 flash addresses per word*/
 
 
-
-
-
 #define HW_VERSION_SIZE                2            /* Size in bytes of Hardware version*/
 #define HW_SERIAL_NUMBER_SIZE          7            /* Size in bytes of Hardware Serial Number*/
 
-/* Error Codes*/
-#define NO_ERROR                    0x00
-#define SECURITY_LOCKED             0x02
-#define WRONG_KEY                   0x03
-#define WRONG_CRC                   0x04
-#define WRITING_INVALID             0x05
-#define WRONG_REQUEST_FORMAT        0x06
-#define MEMORY_NOT_BLANK            0x09
-#define ID_NOT_SUPPORTED            0x10
-#define TIMEOUT                     0x11
 
-#define MEM_APPCODE_START_ADDRESS   0x088000
+
+#define MEM_APPCODE_START_ADDRESS   0x88000
+#define MEM_BOOTCODE_START_ADDRESS  0x80000
 
 /* GOTO start address of applicative area*/
 #define StartApplication() ExitBoot(MEM_APPCODE_START_ADDRESS)
+/* GOTO start address of Bootloader area*/
+#define RESET() ExitBoot(MEM_BOOTCODE_START_ADDRESS)
 
-
+#define Clr_CanRxFlag() CAN_RX_Flag=0
 
 #pragma DATA_SECTION(u40BootVersion,".boot_ver");
-const uint16 u40BootVersion[3] = {0xAABB, 0xCCDD, 0x56FF};
+const uint16_t u40BootVersion[3] = {0xAABB, 0xCCDD, 0x56FF};
 
 #pragma DATA_SECTION(u32UpdataFlag,".updataflag");
-uint32 u32UpdataFlag;
+uint32_t u32UpdataFlag;
 
 
 typedef enum {

@@ -35,24 +35,49 @@ void Init_Flash_Sectors(void)
     {
         Example_Error(oReturnCheck);
     }
-//    oReturnCheck = Fapi_initializeAPI(F021_CPU0_W1_BASE_ADDRESS, 150);
-//    if(oReturnCheck != Fapi_Status_Success)
-//    {
-//        Example_Error(oReturnCheck);
-//    }
 
     oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank0);
     if(oReturnCheck != Fapi_Status_Success)
     {
         Example_Error(oReturnCheck);
     }
-//    oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank1);
-//    if(oReturnCheck != Fapi_Status_Success)
-//    {
-//        Example_Error(oReturnCheck);
-//    }
 
     Flash0EccRegs.ECC_ENABLE.bit.ENABLE = 0xA;
-//    Flash1EccRegs.ECC_ENABLE.bit.ENABLE = 0xA;
     EDIS;
+}
+
+#pragma CODE_SECTION(WriteLogisticInfo,".TI.ramfunc");
+void WriteLogisticInfo(void)
+{
+    Fapi_StatusType oReturnCheck;
+    Fapi_FlashStatusWordType oFlashStatusWord;
+    uint16 miniBuffer[5] = {0xAA11, 0xBB22, 0xCC33, 0xDD44, 0xFF55};
+    EALLOW;
+
+    if( true )
+    {
+        oReturnCheck = Fapi_issueAsyncCommandWithAddress(Fapi_EraseSector,
+                (uint32 *)HW_VERSION_ADDRESS);
+        while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Example_Error(oReturnCheck);
+        }
+
+        //program 4 words at once, 64-bits
+        oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)HW_VERSION_ADDRESS,
+                miniBuffer,
+                sizeof(miniBuffer),
+                0,
+                0,
+                Fapi_AutoEccGeneration);
+        while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Example_Error(oReturnCheck);
+        }
+    }
+
+    EDIS;
+    return;
 }

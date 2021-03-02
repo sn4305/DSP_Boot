@@ -8,6 +8,10 @@
 #ifndef USERINC_FLASH_H_
 #define USERINC_FLASH_H_
 
+#include "ErrHandler.h"
+
 void Init_Flash_Sectors(void);
+
+void WriteLogisticInfo(void);
 
 #endif /* USERINC_FLASH_H_ */

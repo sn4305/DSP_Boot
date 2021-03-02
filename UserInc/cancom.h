@@ -57,6 +57,16 @@
 #define BOOT_MODE                      5            /* Used for goto Boot mode*/
 #define DIAGNOSTICSESSION              3            /* Used for goto Diagnostic session*/
 
+typedef enum {
+    CMD_ModeRequest,
+    CMD_LogisticRequest,
+    CMD_SecurityAccess,
+    CMD_EraseMemory,
+    CMD_TransferInformation,
+    CMD_TransferData,
+    CMD_CRCRequest
+} CAN_CMD;
+
 
 extern unsigned char txMsgData[8];
 extern unsigned char rxMsgData[8];
@@ -64,6 +74,8 @@ extern tCANMsgObject sTXCANMessage;
 extern tCANMsgObject sRXCANMessage;
 
 void InitCana(void);
-void SendModeResponse(uint8_t Mode, uint8_t Config);
+void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config);
+void SendGenericResponse(uint8_t MemoryArea, uint8_t error);
+void SendLogisticResponse(uint8_t MemoryArea, uint8_t* Config, uint8_t DataSize);
 
 #endif /* USERINC_CANCOM_H_ */

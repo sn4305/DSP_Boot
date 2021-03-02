@@ -9,15 +9,17 @@
 #define USERINC_INTERRUPT_H_
 
 #include "F28x_Project.h"
-
-
+#include "cancom.h"
+#include "ErrHandler.h"
 
 extern volatile bool CAN_RX_Flag;
+extern volatile CAN_CMD g_enumCAN_Command;
+extern volatile tCANMsgObject g_RXCANMsg;
+extern volatile uint8_t g_u8rxMsgData[8];
 
 __interrupt void cpu_timer0_isr(void);
 __interrupt void canaISR(void);
 
-uint16_t Get_SysTick(void);
-void Clr_SysTick(void);
+
 
 #endif /* USERINC_INTERRUPT_H_ */
