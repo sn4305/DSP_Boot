@@ -133,6 +133,10 @@ void InitCanaMbox(void)
     sRXCANMessage.ui32MsgLen = 1;
     CANMessageSet(CANA_BASE, ID_RX_CRCRequest, &sRXCANMessage, MSG_OBJ_TYPE_RX);
 
+    sRXCANMessage.ui32MsgID = SWVersionCheck;
+    sRXCANMessage.ui32MsgLen = 6;
+    CANMessageSet(CANA_BASE, ID_RX_SWVersionCheck, &sRXCANMessage, MSG_OBJ_TYPE_RX);
+
     sTXCANMessage.ui32MsgID = DIAG_SESSION;
     sTXCANMessage.ui32MsgIDMask = 0;
     sTXCANMessage.ui32Flags = 0;
@@ -168,10 +172,18 @@ void SendLogisticResponse(uint8_t MemoryArea, uint8_t* Config, uint8_t DataSize)
     sTXCANMessage.ui32MsgID = LOGI_RESP;
     sTXCANMessage.ui32MsgLen = 8;
 
+    /* clear data buffer*/
     txMsgData[0] = MemoryArea;
-    for (i = 0; i < DataSize; i++)
+    for (i = 0; i < 7; i++)
     {
-        txMsgData[i+1] = Config[i];
+        if(i < DataSize)
+        {
+            txMsgData[i+1] = Config[i];
+        }
+        else
+        {
+            txMsgData[i+1] = 0;
+        }
     }
 
     CANMessageSet(CANA_BASE, ID_TX_LOGI_RESP, &sTXCANMessage, MSG_OBJ_TYPE_TX);

@@ -16,20 +16,55 @@ Dongdong Yang       20210225           00          Init for Base project 2nd DSP
 
 #include "main.h"
 
-//
-// Function Prototypes
-//
-void Example_Error(Fapi_StatusType status);
-void Init_Flash_Sectors(void);
-void Init_Timer(void);
+#define  __IS_DEBUG
 
 BootMachineStates State = State_TRANSITION;
+static MyBootSys BootStatus;
 uint16_t s_u16Configuration = 0; //OBC address configuration
+static bool ucSecurityUnlocked = 0, ucAppMemoryErase = 0, ucLogMemoryErase = 0, ReceivedInfo = 0, FlashAuthorization = 0;
+
+
+/* ******************************************************
+  ##define global Macro in different project build configuration
+ *Open CCS project propeties->Build->C2000 Compiler->predefined Symbols;
+ *Add macro in Pre-define NAME;
+*********************************************************/
+#ifndef __IS_STANDALONE
+/* function declaration */
+uint32_t MainBoot1(void);
+
+#pragma CODE_SECTION(main,".preboot");
+uint32_t main(void)
+{//Pre boot sequence
+   if (boot_even_flag == BootEvenValid)
+   {
+#ifndef __IS_DEBUG
+       StartBootEven();
+#else
+       MainBoot1();
+#endif
+   }
+   else if(boot_odd_flag == BootOddValid)
+   {
+       StartBootOdd();
+   }
+   else
+   {
+       RESET();
+   }
+   return 1;
+
+}
+#endif
 
 /**
  * main.c
  */
-void main(void)
+#ifndef __IS_STANDALONE
+uint32_t MainBoot1(void)
+#else
+uint32_t main(void)
+#endif
 {
 //    uint32 FlagAppli;
     //
@@ -93,12 +128,6 @@ void main(void)
     //
     Init_Flash_Sectors();
 
-    //
-    // Gain pump semaphore for Bank0.
-    // User may need to do this for Bank1 if programming Bank1.
-    //
-    SeizeFlashPump_Bank0();
-
     EINT;
 //    ERTM;  // Enable Global realtime interrupt DBGM
 
@@ -128,6 +157,7 @@ void main(void)
                 {/* FlagAppli is valid, jump to APP*/
                     TMR_Stop();
                     TMR_SoftwareCounterClear();
+                    DELAY_US(200000L);
                     StartApplication();
                 }
                 else if(UPDATE_APP_RQST == u32UpdataFlag)
@@ -147,7 +177,6 @@ void main(void)
     //  ||                 STATE: DEFAULT                         ||
     //  ||========================================================||
             case State_DEFAULT:
-                //toggle LED
                 if(CAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
@@ -162,6 +191,7 @@ void main(void)
                         else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
                         {
                             u32UpdataFlag = 0;
+                            DELAY_US(200000L);
                             RESET();
                         }
                     }
@@ -178,6 +208,7 @@ void main(void)
                     /*5s Timeout*/
                     u32UpdataFlag = 0;
                     TMR_SoftwareCounterClear();
+                    DELAY_US(200000L);
                     RESET();
                 }
                 /*Wait for message*/
@@ -189,22 +220,34 @@ void main(void)
                     switch(g_enumCAN_Command)
                     {
                         case CMD_ModeRequest:
-                            if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
-                            {/* Enter boot mode request : Send positive Response
-                             * No Action*/
-                                SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
-                            }
-                            else if ((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                            /* Mode Request*/
+                            error = IsRequestValid(g_RXCANMsg);
+                            if (error)
                             {
-                                /* Go to Default Mode : send response and Reset*/
-                                SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
-                                RESET();
+                                SendGenericResponse(MEMORY_AREA, error);
                             }
                             else
                             {
-                                /* Do nothing */
+                                if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
+                                {/* Enter boot mode request : Send positive Response
+                                 * No Action*/
+                                    SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
+                                }
+                                else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                                {
+                                    /* Reset*/
+                                    u32UpdataFlag = 0;
+                                    DINT;
+                                    DELAY_US(200000L);
+                                    RESET();
+                                }
+                                else
+                                {
+                                    /* Do nothing */
+                                }
                             }
                             break;
+
                         case CMD_LogisticRequest:
                             /* Logistic Request*/
                             error = IsLogisticValid(g_RXCANMsg);
@@ -219,6 +262,20 @@ void main(void)
                                 LogiticRequestHandle(g_u8rxMsgData[0]);
                             }
                             break;
+
+                        case CMD_SWVersionCheck:
+                            error = IsSWVersionCheckValid(g_RXCANMsg);
+                            if (error)
+                            {
+                                SendGenericResponse(MEMORY_AREA, error);
+                            }
+                            else
+                            {
+                                SWVersionComparetHandle(g_RXCANMsg, BootStatus, &FlashAuthorization);
+                                //FlashAuthorization = 1;
+                            }
+                            break;
+
                         case CMD_SecurityAccess:
                             break;
                         case CMD_EraseMemory:
@@ -247,7 +304,7 @@ void main(void)
 
 #ifdef DEMOBOARD
         //toggle LED
-        if(0 == Get_SysTick()%8)
+        if(0 == Get_SysTick()%40)
             GPIO_WritePin(BLINKY_LED_GPIO, 0);
         else
             GPIO_WritePin(BLINKY_LED_GPIO, 1);

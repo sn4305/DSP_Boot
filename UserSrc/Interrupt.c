@@ -118,6 +118,9 @@ canaISR(void)
            case ID_RX_SecurityAccess:
                g_enumCAN_Command = CMD_SecurityAccess;
                break;
+           case ID_RX_SWVersionCheck:
+               g_enumCAN_Command = CMD_SWVersionCheck;
+               break;
            case ID_RX_EraseMemory:
                g_enumCAN_Command = CMD_EraseMemory;
                break;

@@ -28,6 +28,7 @@
 #define CRCRequest                     0x4E3FF01
 #define SecurityAccess                 0x4E4FF01
 #define LogisticRequest                0x4E5FF01
+#define SWVersionCheck                 0x4E6FF01
 
 #ifdef DCDC
 #define ModeRequest                    0x4D3FF01   /* Receivec CAN ID for mode request for DCDC*/
@@ -44,7 +45,8 @@
 #define ID_RX_TransferInformation      5
 #define ID_RX_TransferData             6
 #define ID_RX_CRCRequest               7
-#define ID_RX_OBJ_END                  7
+#define ID_RX_SWVersionCheck           8
+#define ID_RX_OBJ_END                  8
 
 #define ID_TX_OBJ_START                16
 #define ID_TX_GENERAL_RESP             16
@@ -60,6 +62,7 @@
 typedef enum {
     CMD_ModeRequest,
     CMD_LogisticRequest,
+    CMD_SWVersionCheck,
     CMD_SecurityAccess,
     CMD_EraseMemory,
     CMD_TransferInformation,

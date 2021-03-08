@@ -32,8 +32,10 @@
 #define MEMORY_AREA                     0x20    /* Value of Memory Area for OBC*/
 #endif
 
-#define HW_VERSION_ADDRESS              0x0BA000    /* Address of Hardware Version*/
-#define HW_SERIAL_NUMBER_ADDRESS        0x0BA001    /* Address of Hardware Serial Number*/
+#define HW_VERSION_ADDRESS              0x0C6002    /* Address of Hardware Version*/
+#define HW_VERSION_CRC                  0x0C6003    /* Address of Hardware Version CRC*/
+#define HW_SERIAL_NUMBER_ADDRESS        0x0C6004    /* Address of Hardware Serial Number*/
+#define HW_SERIAL_NUMBER_CRC            0x0C6008    /* Address of Hardware Serial Number CRC*/
 #define HW_VERSION_SIZE                 2           /* Size in bytes of Hardware version*/
 #define HW_SERIAL_NUMBER_SIZE           7           /* Size in bytes of Hardware Serial Number*/
 
@@ -41,7 +43,22 @@
 #define MAX_SN                          0x24u
 #define CRC_LENGTH                      2u      /* CRC Length in Bytes*/
 
+typedef struct {
+    uint8_t BootPolarity;
+    uint32_t BootPNAddr;
+    uint32_t BootValidFlagAddr;
+    uint32_t OppositBootStartAddr;
+    uint32_t OppositBootCRCAddr;
+    uint32_t OppositBootFlagValidAddr;
+    uint32_t OppositBootEndAddr;
+    uint32_t OppositBootValidCode;
+} MyBootSys;
+
+uint8_t IsRequestValid(tCANMsgObject Received_Message);
+
 uint8_t IsLogisticValid(tCANMsgObject Received_Message);
+
+uint8_t IsSWVersionCheckValid(tCANMsgObject Received_Message);
 
 uint8_t IsSecurityValid(tCANMsgObject Received_Message);
 
@@ -54,5 +71,7 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, bool InfoReceived, u
 uint8_t IsCRCRequestValid(tCANMsgObject Received_Message);
 
 void LogiticRequestHandle(uint8_t Identifier);
+
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, bool* Authorization);
 
 #endif /* USERINC_ERRHANDLER_H_ */

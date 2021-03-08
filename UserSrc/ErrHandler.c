@@ -9,6 +9,16 @@
 
 extern const uint16_t u40BootVersion[3];
 
+uint8_t IsRequestValid(tCANMsgObject Received_Message)
+{
+    uint8_t error = NO_ERROR;
+    if(Received_Message.ui32MsgLen != 8)
+    {
+        error = WRONG_REQUEST_FORMAT;
+    }
+    return error;
+}
+
 uint8_t IsLogisticValid(tCANMsgObject Received_Message)
 {
     uint8_t error = NO_ERROR;
@@ -28,6 +38,21 @@ uint8_t IsLogisticValid(tCANMsgObject Received_Message)
     return error;
 }
 
+uint8_t IsSWVersionCheckValid(tCANMsgObject Received_Message)
+{
+    uint8_t error = NO_ERROR;
+    uint8_t data0 = *(Received_Message.pucMsgData);
+    if(Received_Message.ui32MsgLen != 6)
+    {
+        error = WRONG_REQUEST_FORMAT;
+    }
+    else if(data0 != 0x23 && data0 != 0x43 &&
+            data0 != 0x24 && data0 != 0x44)
+    {
+        error = ID_NOT_SUPPORTED;
+    }
+    return error;
+}
 uint8_t IsSecurityValid(tCANMsgObject Received_Message)
 {
     uint8_t error = NO_ERROR;
@@ -188,7 +213,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             Data[0] = (uint8_t)(*pHwVer >> 8);
             Data[1] = (uint8_t)(*pHwVer);
             /*Send*/
-            SendLogisticResponse(Identifier, Data, 2);
+            SendLogisticResponse(Identifier, Data, HW_VERSION_SIZE);
             break;
         }
 
@@ -226,14 +251,16 @@ void LogiticRequestHandle(uint8_t Identifier)
             }
 #endif
             uint16_t *pHwSer = (uint16_t *)HW_SERIAL_NUMBER_ADDRESS;
-            uint8_t Data[5];
+            uint8_t Data[7];
             Data[0] = (uint8_t)(*pHwSer >> 8);
             Data[1] = (uint8_t)(*pHwSer++);
             Data[2] = (uint8_t)(*pHwSer >> 8);
             Data[3] = (uint8_t)(*pHwSer++);
             Data[4] = (uint8_t)(*pHwSer >> 8);
+            Data[5] = (uint8_t)(*pHwSer++);
+            Data[6] = (uint8_t)(*pHwSer >> 8);
             /*Send*/
-            SendLogisticResponse(Identifier, Data, 5);
+            SendLogisticResponse(Identifier, Data, HW_SERIAL_NUMBER_SIZE);
             break;
         }
 
@@ -247,7 +274,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             Data[1] = u40BootVersion[0];
             Data[2] = u40BootVersion[1] >> 8;
             Data[3] = u40BootVersion[1];
-            Data[4] = u40BootVersion[1] >> 8;
+            Data[4] = u40BootVersion[2] >> 8;
             /*Send*/
             SendLogisticResponse(Identifier, Data, 5);
             break;
@@ -276,4 +303,52 @@ void LogiticRequestHandle(uint8_t Identifier)
              * Error is handled before*/
             break;
     }
+}
+
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, bool* Authorization)
+{
+    uint16_t *pVer;
+    uint32_t PN_Addr;
+    uint8_t i, DiffErr, RespMemArea;
+    uint8_t ActualVersion[5];
+    uint8_t *data = (uint8_t *)(Received_Message.pucMsgData);
+
+    if((*data & 0x0F) == 4)
+    {
+        PN_Addr = Info.BootPNAddr;
+        RespMemArea = (MEMORY_AREA|0x04);
+    }
+    else
+    {
+        PN_Addr = APP_VERSION_ADDRESS;
+        RespMemArea = (MEMORY_AREA|0x03);
+    }
+
+    DiffErr = 0;
+    pVer = (uint16_t *)PN_Addr;
+
+    ActualVersion[0] = (uint8_t)(*pVer >> 8);
+    ActualVersion[1] = (uint8_t)(*pVer++);
+    ActualVersion[2] = (uint8_t)(*pVer >> 8);
+    ActualVersion[3] = (uint8_t)(*pVer++);
+    ActualVersion[4] = (uint8_t)(*pVer >> 8);
+
+    data++;
+    for(i = 0; i < 5; i++)
+    {
+        if (ActualVersion[i] != *data)
+        {
+            DiffErr ++;
+        }
+        data++;
+    }
+    if(DiffErr)
+    {
+        *Authorization = true;
+    }
+    else
+    {
+        *Authorization = false;
+    }
+    SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }

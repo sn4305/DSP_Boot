@@ -44,13 +44,19 @@ void Init_Flash_Sectors(void)
 
     Flash0EccRegs.ECC_ENABLE.bit.ENABLE = 0xA;
     EDIS;
+
+    //
+    // Gain pump semaphore for Bank0.
+    // User may need to do this for Bank1 if programming Bank1.
+    //
+    SeizeFlashPump_Bank0();
 }
 
 #pragma CODE_SECTION(WriteLogisticInfo,".TI.ramfunc");
 void WriteLogisticInfo(void)
 {
     Fapi_StatusType oReturnCheck;
-    Fapi_FlashStatusWordType oFlashStatusWord;
+//    Fapi_FlashStatusWordType oFlashStatusWord;
     uint16 miniBuffer[5] = {0xAA11, 0xBB22, 0xCC33, 0xDD44, 0xFF55};
     EALLOW;
 

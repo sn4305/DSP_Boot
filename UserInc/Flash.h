@@ -10,6 +10,8 @@
 
 #include "ErrHandler.h"
 
+#define FLASH_PAGE_SIZE_HEXA            0x400   /* Considering 512 words per page, and 2 flash addresses per word*/
+
 void Init_Flash_Sectors(void);
 
 void WriteLogisticInfo(void);
