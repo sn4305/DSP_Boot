@@ -7,7 +7,18 @@
 
 #include "ErrHandler.h"
 
+extern bool ucSecurityUnlocked, ucAppMemoryErase, ucLogMemoryErase, ReceivedInfo, FlashAuthorization;
 extern const uint16_t u40BootVersion[3];
+
+static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
+{
+    /* Start of data write : reception of address and length */
+    pSt_TransDataInfo->Address = ((uint32_t) Received_Message[2] << 16) +
+            ((uint32_t) Received_Message[23] << 8) +
+            (uint32_t) (Received_Message[4]);
+
+    pSt_TransDataInfo->Size = ((uint16_t) Received_Message[5] << 8) + (uint16_t) Received_Message[6];
+}
 
 uint8_t IsRequestValid(tCANMsgObject Received_Message)
 {
@@ -109,10 +120,12 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     return error;
 }
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked, bool ucAppMemoryErase, bool ucLogMemoryErase)
+uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, uint8_t* Message_Data, St_TransDataInfo *pSt_TransDataInfo)
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
+
+    GetInformation(Message_Data, pSt_TransDataInfo);
     if (Received_Message.ui32MsgLen != 8)
     {
         error = WRONG_REQUEST_FORMAT;
@@ -123,13 +136,22 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, bool ucSecurityUnloc
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
             data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42)
+            data0 != 0x41 && data0 != 0x42 &&
+            data0 != 0x24 && data0 != 0x44)
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if (((data0 & 0x0F) == 0) && ucAppMemoryErase  != true)
+    else if( ((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4) && (ucAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
+    }
+    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && ucLogMemoryErase != true)
+    {
+        error = MEMORY_NOT_BLANK;
+    }
+    else if(pSt_TransDataInfo->Size > MAX_BLOCK_SIZE)
+    {
+        error = WRONG_REQUEST_FORMAT;
     }
     else
     {
@@ -138,7 +160,7 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, bool ucSecurityUnloc
     return error;
 }
 
-uint8_t IsTransferDataValid(tCANMsgObject Received_Message, bool InfoReceived, uint8_t SN, uint16_t CopiedData, uint16_t LenDataToCopy)
+uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st_TransDataInfo)
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
@@ -149,22 +171,22 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, bool InfoReceived, u
         TMR3_SoftwareCounterClear();
     }
 
-    if(!InfoReceived)
+    if(!(st_TransDataInfo->ValidInfo))
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(data0 == (SN - 1))
+    else if(data0 == (st_TransDataInfo->ptr_St_Data->SN - 1))
     {
         /* Same sequence number as previous frame: ignore the frame*/
-        error = 20;
+        error = SAME_SN;
     }
-    else if(data0 != (SN + 1) || data0 > MAX_SN)
+    else if(data0 != (st_TransDataInfo->ptr_St_Data->SN + 1) || data0 > MAX_SN)
     {
         error = WRONG_REQUEST_FORMAT;
     }
     else if(Received_Message.ui32MsgLen != 8)
     {
-        if((CopiedData + Received_Message.ui32MsgLen - CRC_LENGTH) != LenDataToCopy)
+        if((st_TransDataInfo->ptr_St_Data->RecvDataIdx + Received_Message.ui32MsgLen - CRC_LENGTH) == st_TransDataInfo->Size + 1)
         {
             error = NO_ERROR;
         }
@@ -336,11 +358,10 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, boo
     data++;
     for(i = 0; i < 5; i++)
     {
-        if (ActualVersion[i] != *data)
+        if (ActualVersion[i] != *data++)
         {
             DiffErr ++;
         }
-        data++;
     }
     if(DiffErr)
     {
@@ -352,3 +373,59 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, boo
     }
     SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }
+
+bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
+{
+    bool ReturnValue = false;
+
+    if ((MemoryArea & 0x0F) == 0)
+    {
+        /* Writing app */
+        if (Address < MEM_APPCODE_START_ADDRESS)
+        {
+            /* Writing in Bootloader area*/
+            ReturnValue = false;
+            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+        }
+        else if (Address > MEM_APPCODE_END_ADDRESS)
+        {
+            /* Writing in Configuration Page
+             * No error sent : Ignore the writing*/
+            ReturnValue = false;
+        }
+        else
+        {
+            ReturnValue = true;
+        }
+    }
+    else if ((MemoryArea & 0x0F) == 4)
+    {
+        if (Address < Info.OppositBootStartAddr || Address > Info.OppositBootEndAddr)
+        {
+            ReturnValue = false;
+            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+        }
+        else
+        {
+            ReturnValue = true;
+        }
+    }
+    else
+    {
+        /* Writing logistic information*/
+        if (Address < FLAG_APPLI_ADDRESS || Address >= (FLAG_APPLI_ADDRESS + FLAG_TOTAL_LEN))
+        {
+            /*Writing before or after last page*/
+            ReturnValue = false;
+            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+        }
+        else
+        {
+            /*Good area*/
+            ReturnValue = true;
+        }
+    }
+
+    return ReturnValue;
+}
+

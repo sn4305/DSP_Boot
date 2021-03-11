@@ -21,8 +21,13 @@ Dongdong Yang       20210225           00          Init for Base project 2nd DSP
 BootMachineStates State = State_TRANSITION;
 static MyBootSys BootStatus;
 uint16_t s_u16Configuration = 0; //OBC address configuration
-static bool ucSecurityUnlocked = 0, ucAppMemoryErase = 0, ucLogMemoryErase = 0, ReceivedInfo = 0, FlashAuthorization = 0;
+bool ucSecurityUnlocked = 0, ucAppMemoryErase = 0, ucLogMemoryErase = 0, FlashAuthorization = 0;
+uint8_t RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
+St_TransData st_TransData = {0, RecvBuf, 0};
+St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
 
+/* function declaration */
+static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
 
 /* ******************************************************
   ##define global Macro in different project build configuration
@@ -277,19 +282,144 @@ uint32_t main(void)
                             break;
 
                         case CMD_SecurityAccess:
+                            error = IsSecurityValid(g_RXCANMsg);
+                            if ((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA || g_u8rxMsgData[0] == (MEMORY_AREA | 4))
+                            {
+                                if(!error)
+                                {
+                                    /* Security successfully unlocked*/
+                                    ucSecurityUnlocked = true;
+                                }
+                                else
+                                {
+                                    /* Security successfully unlocked*/
+                                    ucSecurityUnlocked = false;
+                                }
+                                SendGenericResponse(MEMORY_AREA, error);
+                            }
+                            else
+                            {
+                                /* Message for another OBC/DCDC device */
+                            }
                             break;
-                        case CMD_EraseMemory:
-#ifdef DEMOBOARD
-                            WriteLogisticInfo();
 
-#endif
+                        case CMD_EraseMemory:
+                            error = IsEraseValid(g_RXCANMsg, ucSecurityUnlocked);
+                            if(error)
+                            {
+                                /* Error case : send NOK*/
+                                SendGenericResponse(MEMORY_AREA, error);
+                            }
+                            else
+                            {
+                                if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
+                                {
+                                    EraseFlash(g_u8rxMsgData[0], FlashAuthorization, BootStatus);
+                                }
+                                else
+                                {
+                                    /* Message for another component : do nothing*/
+                                }
+                            }
                             break;
+
                         case CMD_TransferInformation:
+                            /* Start timer for timeout*/
+                            error = IsTransferInfoValid(g_RXCANMsg, g_u8rxMsgData, &st_TransDataInfo);
+                            if (error)
+                            {
+                                /* Send error message*/
+                                SendGenericResponse(MEMORY_AREA, error);
+                            }
+                            else
+                            {
+                                if (MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
+                                {
+                                    /* Correct Memory area*/
+                                    if (g_u8rxMsgData[1] != (uint8_t) (st_TransDataInfo.BSC + 1))
+                                    {
+                                        /* Problem in BSC*/
+                                        SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
+                                    }
+                                    else
+                                    {
+                                        /* Store information from frame, prepare for data reception*/
+                                        st_TransDataInfo.BSC++;
+                                        st_TransDataInfo.ptr_St_Data->SN = 0;
+                                        st_TransDataInfo.ptr_St_Data->RecvDataIdx = 0;
+                                        st_TransDataInfo.ValidInfo = true;
+                                        st_TransDataInfo.MemArea = g_u8rxMsgData[0];
+                                    }
+                                }
+                                else
+                                {
+                                    /* Request for other hardware
+                                     * Do Nothing */
+                                }
+                            }
                             break;
+
                         case CMD_TransferData:
+                            if (MEMORY_AREA == (st_TransDataInfo.MemArea & 0xF0))
+                            {
+                                /*Request for this board*/
+                                error = IsTransferDataValid(g_RXCANMsg, &st_TransDataInfo);
+                                if (error)
+                                {
+                                    if (error == SAME_SN)
+                                    {
+                                        /* Same sequence number as previous frame: ignore the frame*/
+                                        TMR3_SoftwareCounterClear();
+                                    }
+                                    else
+                                    {
+                                        st_TransDataInfo.ValidInfo = false;
+                                        st_TransDataInfo.ptr_St_Data->SN = 0;
+                                        SendGenericResponse(MEMORY_AREA, error);
+                                    }
+                                }
+                                else if(MEMORY_AREA == st_TransDataInfo.MemArea || (st_TransDataInfo.MemArea & 0x0F) == 4)
+                                {
+                                    /* Reset timeout counter*/
+                                    TMR3_SoftwareCounterClear();
+                                    st_TransDataInfo.ptr_St_Data->SN++;
+                                    /* Receive data*/
+                                    TreatData(g_u8rxMsgData, &st_TransDataInfo);
+                                }
+                                else
+                                {
+                                    /*Logistic information*/
+                                    if ((st_TransDataInfo.MemArea & 0x0F) == 1 && st_TransDataInfo.Size != HW_VERSION_SIZE)
+                                    {
+                                        /* Transfer Data for HW version is wrong*/
+                                        SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
+                                    }
+                                    else if((st_TransDataInfo.MemArea & 0x0F) == 2 && st_TransDataInfo.Size != HW_SERIAL_NUMBER_SIZE)
+                                    {
+                                        /* Transfer Data for HW Serial Number is wrong*/
+                                        SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
+                                    }
+                                    else
+                                    {
+//                                        WriteLogisticInfo(&Received_Message, st_TransDataInfo.MemArea);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                /* Request for other hardware
+                                 * Do Nothing */
+                            }
                             break;
+
                         case CMD_CRCRequest:
+                        {
+                            uint16_t crc16;
+                            crc16 = CRC16(0x00, g_u8rxMsgData, (uint16_t)g_RXCANMsg.ui32MsgLen);
+                            SendGenericResponse((uint8_t)(crc16 >> 8), (uint8_t)crc16);
+                        }
                             break;
+
                         default:
                             /* Do Nothing*/
                             break;
@@ -320,6 +450,103 @@ uint32_t main(void)
 
     } // while (1)
 
+}
+
+static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
+{
+    int i, j;
+    uint16_t DataToFlash[FLASH_WORDS_PER_ROW];
+
+    /* Extract data from received frame*/
+    for(j = 1; j < 8; j++)
+    {
+        if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx < pSt_TransDataInfo->Size + CRC_LENGTH)
+        { /*Data + CRC*/
+            *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->ptr_St_Data->RecvDataIdx) = Received_Message[j];
+            pSt_TransDataInfo->ptr_St_Data->RecvDataIdx++;
+        }
+        else
+        { /*i == FLASH_BYTES_PER_ROW_PHANTOM*/
+            /* All data are received*/
+            break;
+        }
+    }
+    if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx == pSt_TransDataInfo->Size + CRC_LENGTH)
+    {
+        if (FlashAuthorization == 1)
+        {
+            /* All data received form consecutive frames
+             * Extract CRC from last Frame */
+            uint16_t CRC = ((uint16_t) *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->Size) << 8) +
+                    ((uint16_t) *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->Size + 1));
+            /* Re-calculate CRC*/
+            uint16_t CRCCalc = CalcCRC_Bloc(pSt_TransDataInfo->Address, pSt_TransDataInfo->Size, pSt_TransDataInfo->MemArea, pSt_TransDataInfo->ptr_St_Data->pRecvData);
+
+            if(CRCCalc == CRC)
+            {
+                /*Write data to FLASH*/
+                bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->Address, pSt_TransDataInfo->MemArea, BootStatus);
+//                ClrWdt();
+                if(CorrectArea)
+                {
+                    /*Fill DataToCopy with 0xFF*/
+                    for (i = pSt_TransDataInfo->Size; i < MAX_BLOCK_SIZE; i++)
+                    {
+                        *(pSt_TransDataInfo->ptr_St_Data->pRecvData + i) = 0xFF;
+                    }
+                    /*Convert structure for FLASH Routines*/
+                    for (i = 0, j = 0; i < FLASH_WORDS_PER_ROW; i++)
+                    {
+                        DataToFlash[i] = ((uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j) << 8) + (uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j + 1);
+                        j += 2;
+                    }
+
+                    if(WriteFlash(pSt_TransDataInfo->Address, DataToFlash, pSt_TransDataInfo->Size/2 + pSt_TransDataInfo->Size%2))
+                    {
+                        /* error happened when write flash*/
+                        if ((pSt_TransDataInfo->MemArea & 0x0F) == 0)
+                        {
+                            /* Problem in app Memory Area
+                             * Reset indicators */
+                            ucAppMemoryErase = false;
+                            pSt_TransDataInfo->ValidInfo = false;
+                        }
+                        else
+                        {
+                            /*Problem in Logistic memory Area*/
+                            ucLogMemoryErase = false;
+                        }
+                        /* Send error*/
+                        SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+                    }
+                    else
+                    {
+                        /* No error happened when write flash, send positive ACK, Stop timeout Timer*/
+                        pSt_TransDataInfo->ValidInfo = false;
+                        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+                    }
+
+//                    if(!WriteError(Received_Message->frame.data0, &ucAppMemoryErase, &ucLogMemoryErase))
+//                    {
+//                        /*Read Flash back and check it*/
+//                        CheckFlash(Address, LenDataToCopy, DataToFlash, MemoryArea);
+//                    }
+                }
+                else
+                {
+                    /* Ignore Writing in configuration area
+                     * Throw error otherwise
+                     * Handled in CheckWritingAddress function*/
+                }
+
+            }
+            else
+            {
+                /*Send Wrong CRC*/
+                SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+            }/*(CRCRead == CRC)*/
+        }
+    }
 }
 
 //

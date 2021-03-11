@@ -49,13 +49,13 @@ PAGE 0 :  /* Program Memory */
    BOOT1_CRC        : origin = 0x0C5FFD, length = 0x000001  /* bootloader0 CRC, Bootloader0 program end */
    BOOT1_VALID		: origin = 0x0C5FFE, length = 0x000002  /* bootloader0 Valid flag */
    /* Flag area */
-   APP_VAILID       : origin = 0x0C6000, length = 0x000002	/* Application software vaild flag(2 x 16bit) */
-   HW_VERSION       : origin = 0x0C6002, length = 0x000001	/* OBC hardware version(1 x 16bit) */
-   HW_VER_CRC       : origin = 0x0C6003, length = 0x000001	/* OBC hardware version CRC(1 x 16bit) */
-   HW_SERIAL        : origin = 0x0C6004, length = 0x000004	/* OBC hardware serial number(7 x 8bit) */
-   HW_SER_CRC       : origin = 0x0C6008, length = 0x000001	/* OBC hardware serial number CRC(2 x 8bit) */
+   APP_VAILID       : origin = 0x0C6000, length = 0x000004	/* Application software vaild flag(2 x 16bit) */
+   HW_VERSION       : origin = 0x0C6004, length = 0x000001	/* OBC hardware version(1 x 16bit) */
+   HW_VER_CRC       : origin = 0x0C6005, length = 0x000003	/* OBC hardware version CRC(1 x 16bit) */
+   HW_SERIAL        : origin = 0x0C6008, length = 0x000004	/* OBC hardware serial number(7 x 8bit) */
+   HW_SER_CRC       : origin = 0x0C600C, length = 0x000001	/* OBC hardware serial number CRC(2 x 8bit) */
    /* Flag area */
-   FLASHR           : origin = 0x0C6009, length = 0x001FF7	/* on-chip Flash */
+   FLASHR           : origin = 0x0C600D, length = 0x001FF2	/* on-chip Flash */
    FLASHS           : origin = 0x0C8000, length = 0x008000	/* on-chip Flash, Reserved for Application1 program start*/
    FLASHT           : origin = 0x0D0000, length = 0x008000	/* on-chip Flash */   
    FLASHU           : origin = 0x0D8000, length = 0x008000	/* on-chip Flash */   
@@ -166,6 +166,7 @@ SECTIONS
    /* user defined sections */
    .boot_ver           : > BOOT_PN      PAGE = 0
    .boot_valid         : > VALID_FLAG   PAGE = 0
+   .FlashReadBackBuf   : > RAMGS3   	PAGE = 1
    .updataflag         : > UPDATE_FLAG  PAGE = 0, TYPE = NOLOAD
    .reset              : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
    

@@ -113,6 +113,7 @@ void InitSysCtrl(void)
     // reside in RAM.
     //
     InitFlash_Bank0();
+    InitFlash_Bank1();
 #endif
 
     //
