@@ -313,6 +313,7 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
     uint16_t k, j, fail, miniLen;
     uint16_t miniBuffer[4]; //useful for 4-word access to flash with
 
+    EALLOW;
     for(k = 0; k <= (len / 4); k++)
     {
         if(k == (len/4))
@@ -365,6 +366,8 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
         } //check if miniBuffer does not contain all already erased data
     } //for(int k); loads miniBuffer with Buffer elements
 
+    EDIS;
+
     if(NO_ERROR == fail)
     {
         Write_Err = false;
@@ -374,35 +377,39 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
 }
 
 #pragma CODE_SECTION(WriteLogisticInfo,".TI.ramfunc");
-void WriteLogisticInfo(void)
+void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea)
 {
     Fapi_StatusType oReturnCheck;
-    uint16 miniBuffer[5] = {0xAA11, 0xBB22, 0xCC33, 0xDD44, 0xFF55};
+    uint8_t i = 0;
+    Un_FLAG Flag;
     EALLOW;
 
-    if( true )
-    {
-        SeizeFlashPump_Bank1();
-        oReturnCheck = Fapi_issueAsyncCommandWithAddress(Fapi_EraseSector,
-                (uint32 *)HW_VERSION_ADDRESS);
-        while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
-        if(oReturnCheck != Fapi_Status_Success)
-        {
-            Example_Error(oReturnCheck);
-        }
+    SeizeFlashPump_Bank1();
 
-        //program 4 words at once, 64-bits
-        oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)HW_VERSION_ADDRESS,
-                miniBuffer,
-                sizeof(miniBuffer),
-                0,
-                0,
-                Fapi_AutoEccGeneration);
-        while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
-        if(oReturnCheck != Fapi_Status_Success)
+    if((MemoryArea & 0x0F) == 1)
+    {
+        /*HW Version case*/
+        /*Create structure filled with 0xFF*/
+        for (i = 0; i < FLAG_TOTAL_LEN; i++)
         {
-            Example_Error(oReturnCheck);
+            Flag.data[i] = 0xFF;
         }
+        Flag.flag.HW_Ver = ((uint16_t)Data[1] << 8) + (uint16_t)Data[2];
+        /*Write 2 bytes of data*/
+        WriteFlash(HW_VERSION_ADDRESS, &Flag.flag.HW_Ver, 1);
+    }
+    else if((MemoryArea & 0x0F) == 2)
+    {
+        for (i = 0; i < FLAG_TOTAL_LEN; i++)
+        {
+            Flag.data[i] = 0xFF;
+        }
+        Flag.flag.HW_Ser_H[0] = ((uint16_t)Data[1] << 8) | Data[2];
+        Flag.flag.HW_Ser_H[1] = ((uint16_t)Data[3] << 8) | Data[4];
+        Flag.flag.HW_Ser_H[2] = ((uint16_t)Data[5] << 8) | Data[6];
+        Flag.flag.HW_Ser_L    = (uint16_t)Data[7];
+        /*Write 8 bytes of data*/
+        WriteFlash(HW_SERIAL_NUMBER_ADDRESS, &Flag.flag.HW_Ser_H, 4);
     }
 
     EDIS;

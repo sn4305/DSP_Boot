@@ -18,32 +18,17 @@
 
 /* Macro definition */
 #ifdef DEMOBOARD
-#define BLINKY_LED_GPIO    12      //Red
-#define CAN_LED_GPIO       13      //Blue
+#define BLINKY_LED_GPIO                 12      //Red
+#define CAN_LED_GPIO                    13      //Blue
 #endif
 
 #define boot_even_flag                  *(uint32 *)FLAG_BOOT0_ADDRESS
 #define boot_odd_flag                   *(uint32 *)FLAG_BOOT1_ADDRESS
-#define BootEvenValid                   0xBA5EBA11
-#define BootOddValid                    0xC0DEBA5E
-
-#define APP_VALID                       0xA5C6BD72      /* Value of Flag when application is valid*/
 
 #define UPDATE_APP_RQST                 0xC0DEFEED
 
 
-extern void ExitBoot(uint32 EntryAddr);
-
-/* GOTO start address of applicative area*/
-#define StartApplication()              ExitBoot(MEM_APPCODE_START_ADDRESS)
-/* GOTO start address of PreBootloader area*/
-#define RESET()                         ExitBoot(MEM_PREBOOT_START_ADDRESS)
-/* GOTO start address of Bootloader0 area*/
-#define StartBootEven()                 ExitBoot(MEM_BOOT0_START_ADDRESS)
-/* GOTO start address of Bootloader1 area*/
-#define StartBootOdd()                  ExitBoot(MEM_BOOT1_START_ADDRESS)
-
-#define Clr_CanRxFlag() CAN_RX_Flag=0
+#define Clr_CanRxFlag()                 CAN_RX_Flag=0
 
 #if defined (__IS_STANDALONE) && defined(__IS_ODD)
 #define VALID_FLAG_ADDR                 FLAG_BOOT1_ADDRESS
@@ -74,8 +59,5 @@ typedef enum {
     State_DEFAULT,
     State_BOOT
 } BootMachineStates;
-
-
-
 
 #endif /* USERINC_MAIN_H_ */

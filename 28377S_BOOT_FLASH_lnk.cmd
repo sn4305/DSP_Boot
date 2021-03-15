@@ -23,18 +23,18 @@ PAGE 0 :  /* Program Memory */
    BOOT0_START      : origin = 0x082000, length = 0x000002	/* on-chip Flash, Bootloader0 program start */
    FLASHB           : origin = 0x082002, length = 0x001FFE	/* on-chip Flash */
    FLASHC           : origin = 0x084000, length = 0x002000	/* on-chip Flash */
-   FLASHD           : origin = 0x086000, length = 0x001FFA	/* on-chip Flash */
-   BOOT0_PN         : origin = 0x087FFA, length = 0x000003  /* bootloader0 software version, 5 valid bytes */
-   BOOT0_CRC        : origin = 0x087FFD, length = 0x000001  /* bootloader0 CRC, Bootloader0 program end */
-   BOOT0_VALID		: origin = 0x087FFE, length = 0x000002  /* bootloader0 Valid flag */
+   FLASHD           : origin = 0x086000, length = 0x001FF4	/* on-chip Flash */
+   BOOT0_PN         : origin = 0x087FF4, length = 0x000004  /* bootloader0 software version, 5 valid bytes */
+   BOOT0_CRC        : origin = 0x087FF8, length = 0x000004  /* bootloader0 CRC, Bootloader0 program end */
+   BOOT0_VALID		: origin = 0x087FFC, length = 0x000004  /* bootloader0 Valid flag */
    FLASHE           : origin = 0x088000, length = 0x008000	/* on-chip Flash, Application0 program start */
    FLASHF           : origin = 0x090000, length = 0x008000	/* on-chip Flash */
    FLASHG           : origin = 0x098000, length = 0x008000	/* on-chip Flash */
    FLASHH           : origin = 0x0A0000, length = 0x008000	/* on-chip Flash */
    FLASHI           : origin = 0x0A8000, length = 0x008000	/* on-chip Flash */
-   FLASHJ           : origin = 0x0B0000, length = 0x007FFC	/* on-chip Flash */
-   APP_PN           : origin = 0x0B7FFC, length = 0x000003	/* Application software version, 5 valid bytes */
-   APP_CRC          : origin = 0x0B7FFF, length = 0x000001  /* Application CRC */
+   FLASHJ           : origin = 0x0B0000, length = 0x007FF8	/* on-chip Flash */
+   APP_PN           : origin = 0x0B7FF8, length = 0x000004	/* Application software version, 5 valid bytes */
+   APP_CRC          : origin = 0x0B7FFC, length = 0x000004  /* Application CRC */
    /*reserved*/
    FLASHK           : origin = 0x0B8000, length = 0x001FFE	/* on-chip Flash */
    FLASHL           : origin = 0x0BA000, length = 0x002000	/* on-chip Flash */
@@ -44,18 +44,18 @@ PAGE 0 :  /* Program Memory */
    BOOT1_START      : origin = 0x0C0000, length = 0x000002	/* on-chip Flash, Bootloader1 program start  */
    FLASHO           : origin = 0x0C0002, length = 0x001FFE	/* on-chip Flash */
    FLASHP           : origin = 0x0C2000, length = 0x002000	/* on-chip Flash */
-   FLASHQ           : origin = 0x0C4000, length = 0x001FFA	/* on-chip Flash */
-   BOOT1_PN         : origin = 0x0C5FFA, length = 0x000003  /* bootloader0 software version, 5 valid bytes */
-   BOOT1_CRC        : origin = 0x0C5FFD, length = 0x000001  /* bootloader0 CRC, Bootloader0 program end */
-   BOOT1_VALID		: origin = 0x0C5FFE, length = 0x000002  /* bootloader0 Valid flag */
+   FLASHQ           : origin = 0x0C4000, length = 0x001FF4	/* on-chip Flash */
+   BOOT1_PN         : origin = 0x0C5FF4, length = 0x000004  /* bootloader0 software version, 5 valid bytes */
+   BOOT1_CRC        : origin = 0x0C5FF8, length = 0x000004  /* bootloader0 CRC, Bootloader0 program end */
+   BOOT1_VALID		: origin = 0x0C5FFC, length = 0x000004  /* bootloader0 Valid flag */
    /* Flag area */
    APP_VAILID       : origin = 0x0C6000, length = 0x000004	/* Application software vaild flag(2 x 16bit) */
-   HW_VERSION       : origin = 0x0C6004, length = 0x000001	/* OBC hardware version(1 x 16bit) */
-   HW_VER_CRC       : origin = 0x0C6005, length = 0x000003	/* OBC hardware version CRC(1 x 16bit) */
-   HW_SERIAL        : origin = 0x0C6008, length = 0x000004	/* OBC hardware serial number(7 x 8bit) */
-   HW_SER_CRC       : origin = 0x0C600C, length = 0x000001	/* OBC hardware serial number CRC(2 x 8bit) */
+   HW_VERSION       : origin = 0x0C6004, length = 0x000004	/* OBC hardware version(1 x 16bit) */
+   HW_VER_CRC       : origin = 0x0C6008, length = 0x000004	/* OBC hardware version CRC(1 x 16bit) */
+   HW_SERIAL        : origin = 0x0C600C, length = 0x000004	/* OBC hardware serial number(7 x 8bit) */
+   HW_SER_CRC       : origin = 0x0C6010, length = 0x000004	/* OBC hardware serial number CRC(2 x 8bit) */
    /* Flag area */
-   FLASHR           : origin = 0x0C600D, length = 0x001FF2	/* on-chip Flash */
+   FLASHR           : origin = 0x0C6014, length = 0x001FEC	/* on-chip Flash */
    FLASHS           : origin = 0x0C8000, length = 0x008000	/* on-chip Flash, Reserved for Application1 program start*/
    FLASHT           : origin = 0x0D0000, length = 0x008000	/* on-chip Flash */   
    FLASHU           : origin = 0x0D8000, length = 0x008000	/* on-chip Flash */   

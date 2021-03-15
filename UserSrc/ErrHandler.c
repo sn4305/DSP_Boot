@@ -9,12 +9,17 @@
 
 extern bool ucSecurityUnlocked, ucAppMemoryErase, ucLogMemoryErase, ReceivedInfo, FlashAuthorization;
 extern const uint16_t u40BootVersion[3];
+extern uint32_t u32UpdataFlag;
+
+extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
+extern uint16_t CalcCRC_FLASH(uint16_t Init, uint16_t CodeStartAddr, uint16_t len_word);
+extern uint16_t CRC16(uint16_t reg_init, uint8_t *data, uint16_t len);
 
 static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     /* Start of data write : reception of address and length */
     pSt_TransDataInfo->Address = ((uint32_t) Received_Message[2] << 16) +
-            ((uint32_t) Received_Message[23] << 8) +
+            ((uint32_t) Received_Message[3] << 8) +
             (uint32_t) (Received_Message[4]);
 
     pSt_TransDataInfo->Size = ((uint16_t) Received_Message[5] << 8) + (uint16_t) Received_Message[6];
@@ -106,7 +111,8 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
             data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42)
+            data0 != 0x41 && data0 != 0x42 &&
+            data0 != 0x24 && data0 != 0x44)
     {
         error = ID_NOT_SUPPORTED;
     }
@@ -212,7 +218,8 @@ uint8_t IsCRCRequestValid(tCANMsgObject Received_Message)
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
             data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42)
+            data0 != 0x41 && data0 != 0x42 &&
+            data0 != 0x24 && data0 != 0x44)
     {
         error = ID_NOT_SUPPORTED;
     }
@@ -427,5 +434,146 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
     }
 
     return ReturnValue;
+}
+
+void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
+{
+    uint16_t WriteBuf[2];
+    uint16_t ReceivedCRC;
+    uint32_t wCRCAddr;
+    uint16_t CRCFlash;
+
+    if ((*ReceivedMessage.pucMsgData & 0x0F) == 4)
+    {
+        wCRCAddr = BootStatus.OppositBootCRCAddr;
+    }
+    else
+    {
+        wCRCAddr = APP_CRC_ADDRESS;
+    }
+
+    u32UpdataFlag = 0;
+    ReceivedCRC = ((uint16_t) ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+
+    if ((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+    {
+        /*Calculate CRC for boot memory area*/
+        CRCFlash = CalcCRC_FLASH(0, BootStatus.OppositBootStartAddr, BOOT_TOTAL_LEN);
+    }
+    else
+    {
+        /*Calculate the CRC for app memory area*/
+        CRCFlash = CalcCRC_FLASH(0, MEM_APPCODE_START_ADDRESS, APP_TOTAL_LEN);
+    }
+
+    if (CRCFlash == ReceivedCRC)
+    {
+        /*Send OK response */
+        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+//        ClrWdt();
+//        TMR3_Start();
+        /*Wait for frame transmission*/
+//        while (TMR3_SoftwareCounterGet() <= 5) {
+//            TMR3_Tasks_16BitOperation();
+//        }
+        //TMR3_Stop();
+        if ((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+        {
+            WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
+            WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);
+
+            WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
+//            Erase_Flash(BootStatus.BootValidFlagAddr);
+            ucAppMemoryErase = false;
+            RESET();
+        }
+        else
+        {
+            WriteBuf[0] = (uint16_t) APP_VALID;
+            WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
+            WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
+            ucAppMemoryErase = false;
+            RESET();
+        }
+    }
+    else
+    {
+        /*Wrong CRC*/
+        SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+    }
+
+}
+
+void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
+{
+    uint16_t ReceivedCRC, HardwareVersionRead, HardwareSNRead[4], DataForCRC[5], CRCCalc;
+
+    if((ReceivedMessage.pucMsgData[0] & 0x0F) == 1)
+    {
+        /* Hardware version case */
+        /*Save received CRC*/
+        ReceivedCRC = (ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+        /*Read Saved data*/
+        HardwareVersionRead = (uint16_t) Read_Data_Word(HW_VERSION_ADDRESS);
+        /*Calculate CRC including received CRC*/
+        DataForCRC[0] = HardwareVersionRead;
+        DataForCRC[1] = 0xFFFF;
+        DataForCRC[2] = 0xFFFF;
+        DataForCRC[3] = 0xFFFF;
+        DataForCRC[4] = ReceivedCRC;
+
+        CRCCalc = CRC16(0, (uint8_t *)DataForCRC, HW_VERSION_SIZE);
+        /*Add received CRC to calculated CRC*/
+        CRCCalc = CRC16(CRCCalc, (uint8_t *)&DataForCRC[4], CRC_LENGTH);
+        if(CRCCalc == 0xF0B8)
+        {
+            /*Correct CRC : save*/
+            SeizeFlashPump_Bank1();
+            WriteFlash(HW_VERSION_ADDRESS, DataForCRC, 5);
+            SendGenericResponse(MEMORY_AREA, NO_ERROR);
+        }
+        else
+        {
+            /*Wrong CRC*/
+            SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+        }
+    }
+    else if((ReceivedMessage.pucMsgData[0] & 0x0F) == 2)
+    {
+        /*Serial Number case*/
+        /* Save in RAM received CRC*/
+        ReceivedCRC = (ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+
+        /*Read Saved Serial Number*/
+        HardwareSNRead[0] = Read_Data_Word(HW_SERIAL_NUMBER_ADDRESS);
+        HardwareSNRead[1] = Read_Data_Word(HW_SERIAL_NUMBER_ADDRESS + 1);
+        HardwareSNRead[2] = Read_Data_Word(HW_SERIAL_NUMBER_ADDRESS + 2);
+        HardwareSNRead[3] = Read_Data_Word(HW_SERIAL_NUMBER_ADDRESS + 3);
+
+        /*Calculate CRC on data + received CRC*/
+        DataForCRC[0] = HardwareSNRead[0];
+        DataForCRC[1] = HardwareSNRead[1];
+        DataForCRC[2] = HardwareSNRead[2];
+        DataForCRC[3] = HardwareSNRead[3];
+        DataForCRC[4] = ReceivedCRC;
+
+        /*CRC on data*/
+        CRCCalc = CRC16(0, (uint8_t *)DataForCRC, HW_SERIAL_NUMBER_SIZE);
+        /*Add received CRC to calculated CRC*/
+        CRCCalc = CRC16(CRCCalc, (uint8_t *)&DataForCRC[4], CRC_LENGTH);
+
+        if(CRCCalc == 0xF0B8)
+        {
+            /* Correct CRC : save CRC*/
+            SeizeFlashPump_Bank1();
+            WriteFlash(HW_SERIAL_NUMBER_ADDRESS, DataForCRC, 5);
+            SendGenericResponse(MEMORY_AREA, NO_ERROR);
+        }
+        else
+        {
+            /*Wrong CRC*/
+            SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+        }
+    }
 }
 

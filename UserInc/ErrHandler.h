@@ -11,6 +11,7 @@
 #include "F28x_Project.h"
 #include "Timer.h"
 #include "cancom.h"
+//#include "CRC.h"
 //#include "Flash.h"
 #include "inc/hw_can.h"
 #include "driverlib/can.h"
@@ -35,21 +36,45 @@
 #endif
 
 #define HW_VERSION_ADDRESS              0x0C6004    /* Address of Hardware Version*/
-#define HW_VERSION_CRC                  0x0C6005    /* Address of Hardware Version CRC*/
-#define HW_SERIAL_NUMBER_ADDRESS        0x0C6008    /* Address of Hardware Serial Number*/
-#define HW_SERIAL_NUMBER_CRC            0x0C600C    /* Address of Hardware Serial Number CRC*/
+#define HW_VERSION_CRC                  0x0C6008    /* Address of Hardware Version CRC*/
+#define HW_SERIAL_NUMBER_ADDRESS        0x0C600C    /* Address of Hardware Serial Number*/
+#define HW_SERIAL_NUMBER_CRC            0x0C6010    /* Address of Hardware Serial Number CRC*/
 #define HW_VERSION_SIZE                 2           /* Size in bytes of Hardware version*/
 #define HW_SERIAL_NUMBER_SIZE           7           /* Size in bytes of Hardware Serial Number*/
 
-#define APP_VERSION_ADDRESS             0x0B7FFC    /* Address of Application sw Version*/
+#define APP_VERSION_ADDRESS             0x0B7FF8    /* Address of Application sw Version*/
+#define APP_CRC_ADDRESS                 0x0B7FFC    /* Address of Application CRC*/
 #define MAX_SN                          0x24u
 #define MAX_BLOCK_SIZE                  256u
 #define CRC_LENGTH                      2u          /* CRC Length in Bytes*/
 
-#define FLAG_TOTAL_LEN                  13u
-#define FLAG_APPLI_ADDRESS              0x000C6000      /* Address of application valid Flag*/
+#define BOOT_TOTAL_LEN                  0x5FF4u     /* Boot sector Length in 16bits*/
+#define APP_TOTAL_LEN                   0x2FFFCul   /* App sector Length in 16bits */
+
+#define FLAG_TOTAL_LEN                  17u
+#define FLAG_APPLI_ADDRESS              0x000C6000  /* Address of application valid Flag*/
 #define MEM_APPCODE_START_ADDRESS       0x88000
-#define MEM_APPCODE_END_ADDRESS         0xB7FFF
+#define MEM_APPCODE_END_ADDRESS         0xB7FF8
+
+#define BootEvenValid                   0xBA5EBA11
+#define BootOddValid                    0xC0DEBA5E
+#define APP_VALID                       0xA5C6BD72      /* Value of Flag when application is valid*/
+
+#define MEM_PREBOOT_START_ADDRESS       0x80000
+
+#define FLASH_BYTES_PER_WORD            2u
+
+extern void ExitBoot(uint32 EntryAddr);
+/* GOTO start address of applicative area*/
+#define StartApplication()              ExitBoot(MEM_APPCODE_START_ADDRESS)
+/* GOTO start address of PreBootloader area*/
+#define RESET()                         ExitBoot(MEM_PREBOOT_START_ADDRESS)
+/* GOTO start address of Bootloader0 area*/
+#define StartBootEven()                 ExitBoot(MEM_BOOT0_START_ADDRESS)
+/* GOTO start address of Bootloader1 area*/
+#define StartBootOdd()                  ExitBoot(MEM_BOOT1_START_ADDRESS)
+
+#define Read_Data_Word(Addr)            *(uint16_t *)(Addr)
 
 typedef struct {
     uint8_t BootPolarity;
@@ -101,5 +126,9 @@ void LogiticRequestHandle(uint8_t Identifier);
 void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, bool* Authorization);
 
 bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info);
+
+void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus);
+
+void LogisticCRCWrite(tCANMsgObject ReceivedMessage);
 
 #endif /* USERINC_ERRHANDLER_H_ */

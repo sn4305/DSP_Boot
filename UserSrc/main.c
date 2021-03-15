@@ -28,6 +28,7 @@ St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
 
 /* function declaration */
 static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
+static void IdentifyBoot(MyBootSys* Info);
 
 /* ******************************************************
   ##define global Macro in different project build configuration
@@ -141,9 +142,9 @@ uint32_t main(void)
     //
     CANEnable(CANA_BASE);
 
-//    u32UpdataFlag = 0xC0DEFEED;
-
     State = State_TRANSITION;
+
+    IdentifyBoot(&BootStatus);
 
 #ifdef DEMOBOARD
     State = State_BOOT;
@@ -401,7 +402,7 @@ uint32_t main(void)
                                     }
                                     else
                                     {
-//                                        WriteLogisticInfo(&Received_Message, st_TransDataInfo.MemArea);
+                                        WriteLogisticInfo(g_u8rxMsgData, st_TransDataInfo.MemArea);
                                     }
                                 }
                             }
@@ -414,9 +415,37 @@ uint32_t main(void)
 
                         case CMD_CRCRequest:
                         {
-                            uint16_t crc16;
-                            crc16 = CRC16(0x00, g_u8rxMsgData, (uint16_t)g_RXCANMsg.ui32MsgLen);
-                            SendGenericResponse((uint8_t)(crc16 >> 8), (uint8_t)crc16);
+//                            uint16_t crc16;
+//                            crc16 = CRC16(0x00, g_u8rxMsgData, (uint16_t)g_RXCANMsg.ui32MsgLen);
+//                            SendGenericResponse((uint8_t)(crc16 >> 8), (uint8_t)crc16);
+                            error = IsCRCRequestValid(g_RXCANMsg);
+                            if(error)
+                            {
+                                SendGenericResponse(MEMORY_AREA, error);
+                            }
+                            else
+                            {
+                                if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
+                                {
+                                    if(((g_u8rxMsgData[0] & 0x0F) == 0 || (g_u8rxMsgData[0] & 0x0F) == 4) && ucAppMemoryErase)
+                                    {
+                                        if(FlashAuthorization) // FlashAuthorization
+                                        {
+//                                            ClrWdt();
+                                            CRCWrite(g_RXCANMsg, BootStatus);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        LogisticCRCWrite(g_RXCANMsg);
+                                    }
+                                }
+                                else
+                                {
+                                    /* Message for other Hardware
+                                     * Do Nothing */
+                                }
+                            }
                         }
                             break;
 
@@ -548,6 +577,33 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
         }
     }
 }
+
+static void IdentifyBoot(MyBootSys* Info)
+{ //Identify current boot
+    if (boot_even_flag == BootEvenValid)
+    {
+        Info->BootPolarity              = 0; // current bootloader is Even
+        Info->BootValidFlagAddr         = FLAG_BOOT0_ADDRESS;
+        Info->BootPNAddr                = BOOT0_PN_ADDRESS;
+        Info->OppositBootCRCAddr        = BOOT1_CRC_ADDRESS;
+        Info->OppositBootStartAddr      = MEM_BOOT1_START_ADDRESS;
+        Info->OppositBootFlagValidAddr  = FLAG_BOOT1_ADDRESS;
+        Info->OppositBootEndAddr        = MEM_BOOT1_END_ADDRESS;
+        Info->OppositBootValidCode      = BootOddValid;
+    }
+    else
+    {
+        Info->BootPolarity              = 1; // current bootloader is Odd
+        Info->BootValidFlagAddr         = FLAG_BOOT1_ADDRESS;
+        Info->BootPNAddr                = BOOT1_PN_ADDRESS;
+        Info->OppositBootCRCAddr        = BOOT0_CRC_ADDRESS;
+        Info->OppositBootStartAddr      = MEM_BOOT0_START_ADDRESS;
+        Info->OppositBootFlagValidAddr  = FLAG_BOOT0_ADDRESS;
+        Info->OppositBootEndAddr        = MEM_BOOT0_END_ADDRESS;
+        Info->OppositBootValidCode      = BootEvenValid;
+    }
+}
+
 
 //
 // End of file
