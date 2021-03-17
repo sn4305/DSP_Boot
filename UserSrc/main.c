@@ -390,12 +390,12 @@ uint32_t main(void)
                                 else
                                 {
                                     /*Logistic information*/
-                                    if ((st_TransDataInfo.MemArea & 0x0F) == 1 && st_TransDataInfo.Size != HW_VERSION_SIZE)
+                                    if ((st_TransDataInfo.MemArea & 0x0F) == 1 && g_RXCANMsg.ui32MsgLen != HW_VERSION_SIZE + 1)
                                     {
                                         /* Transfer Data for HW version is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
                                     }
-                                    else if((st_TransDataInfo.MemArea & 0x0F) == 2 && st_TransDataInfo.Size != HW_SERIAL_NUMBER_SIZE)
+                                    else if((st_TransDataInfo.MemArea & 0x0F) == 2 && g_RXCANMsg.ui32MsgLen != HW_SERIAL_NUMBER_SIZE + 1)
                                     {
                                         /* Transfer Data for HW Serial Number is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);

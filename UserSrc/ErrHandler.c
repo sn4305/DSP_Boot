@@ -6,14 +6,13 @@
  */
 
 #include "ErrHandler.h"
+#include "CRC.h"
 
 extern bool ucSecurityUnlocked, ucAppMemoryErase, ucLogMemoryErase, ReceivedInfo, FlashAuthorization;
 extern const uint16_t u40BootVersion[3];
 extern uint32_t u32UpdataFlag;
 
 extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
-extern uint16_t CalcCRC_FLASH(uint16_t Init, uint16_t CodeStartAddr, uint16_t len_word);
-extern uint16_t CRC16(uint16_t reg_init, uint8_t *data, uint16_t len);
 
 static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
@@ -155,6 +154,16 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, uint8_t* Message_Dat
     {
         error = MEMORY_NOT_BLANK;
     }
+    else if((pSt_TransDataInfo->MemArea & 0x0F) == 1 && pSt_TransDataInfo->Size != HW_VERSION_SIZE)
+    {
+        /* Transfer Data for HW version is wrong*/
+        error = WRONG_REQUEST_FORMAT;
+    }
+    else if((pSt_TransDataInfo->MemArea & 0x0F) == 2 && pSt_TransDataInfo->Size != HW_SERIAL_NUMBER_SIZE)
+    {
+        /* Transfer Data for HW Serial Number is wrong*/
+        error = WRONG_REQUEST_FORMAT;
+    }
     else if(pSt_TransDataInfo->Size > MAX_BLOCK_SIZE)
     {
         error = WRONG_REQUEST_FORMAT;
@@ -236,49 +245,32 @@ void LogiticRequestHandle(uint8_t Identifier)
     {
         case MEMORY_AREA + 1:
         {
+            uint16_t CRCCalc;
             /*Version Number*/
             uint16_t *pHwVer = (uint16_t *)HW_VERSION_ADDRESS;
             uint8_t Data[2];
             Data[0] = (uint8_t)(*pHwVer >> 8);
             Data[1] = (uint8_t)(*pHwVer);
-            /*Send*/
-            SendLogisticResponse(Identifier, Data, HW_VERSION_SIZE);
+            CRCCalc = CRC16(0, (uint16_t *)HW_VERSION_ADDRESS, HW_VERSION_SIZE);
+            /*Add received CRC to calculated CRC*/
+            CRCCalc = CRC16(CRCCalc, (uint16_t *)HW_VERSION_CRC, CRC_LENGTH);
+            if(CRCCalc == 0xF0B8)
+            {
+                /*Send*/
+                SendLogisticResponse(Identifier, Data, HW_VERSION_SIZE);
+            }
+            else
+            {
+                /*Wrong CRC*/
+                SendGenericResponse(Identifier, WRONG_CRC);
+            }
             break;
         }
 
         case MEMORY_AREA + 2:
         {
+            uint16_t CRCCalc;
             /* Serial Number*/
-#if 0
-            uint32_t HWSNL = Read_Data_Word((uint32_t) HW_SERIAL_NUMBER_ADDRESS);
-            uint32_t HWSNH = Read_Data_Word((uint32_t) HW_SERIAL_NUMBER_ADDRESS + 2);
-            uint32_t HWSNLast = Read_Data_Word((uint32_t) HW_SERIAL_NUMBER_ADDRESS + 4);
-            uint32_t HWSN_CRC = Read_Data_Word((uint32_t) HW_SERIAL_NUMBER_ADDRESS + 6);
-            uint16_t CRC = 0;
-            uint8_t Data[9]; /*7 bytes + 2 for CRC*/
-            Data[0] = (uint8_t) (HWSNL >> 8);
-            Data[1] = (uint8_t) (HWSNL);
-            Data[2] = (uint8_t) (HWSNL >> 16);
-            Data[3] = (uint8_t) (HWSNH >> 8);
-            Data[4] = (uint8_t) (HWSNH);
-            Data[5] = (uint8_t) (HWSNH >> 16);
-            Data[6] = (uint8_t) (HWSNLast);
-            Data[7] = (uint8_t) (HWSN_CRC >> 8);
-            Data[8] = (uint8_t) (HWSN_CRC);
-            int i;
-            /*Calculate CRC*/
-            for (i = 0; i < 8; i++){
-                CRC = UpdateCrcKermit(CRC, Data[i]);
-            }
-            if (CRC == 0xF0B8){
-                /*CRC Correct*/
-                SendLogisticResponse(Identifier, Data, 7);
-            }
-            else {
-                /*Wrong CRC*/
-                SendGenericResponse(Identifier, WRONG_CRC);
-            }
-#endif
             uint16_t *pHwSer = (uint16_t *)HW_SERIAL_NUMBER_ADDRESS;
             uint8_t Data[7];
             Data[0] = (uint8_t)(*pHwSer >> 8);
@@ -288,8 +280,19 @@ void LogiticRequestHandle(uint8_t Identifier)
             Data[4] = (uint8_t)(*pHwSer >> 8);
             Data[5] = (uint8_t)(*pHwSer++);
             Data[6] = (uint8_t)(*pHwSer >> 8);
-            /*Send*/
-            SendLogisticResponse(Identifier, Data, HW_SERIAL_NUMBER_SIZE);
+            CRCCalc = CRC16(0, (uint16_t *)HW_SERIAL_NUMBER_ADDRESS, HW_SERIAL_NUMBER_SIZE);
+            /*Add received CRC to calculated CRC*/
+            CRCCalc = CRC16(CRCCalc, (uint16_t *)HW_SERIAL_NUMBER_CRC, CRC_LENGTH);
+            if(CRCCalc == 0xF0B8)
+            {
+                /*CRC Correct*/
+                SendLogisticResponse(Identifier, Data, HW_SERIAL_NUMBER_SIZE);
+            }
+            else
+            {
+                /*Wrong CRC*/
+                SendGenericResponse(Identifier, WRONG_CRC);
+            }
             break;
         }
 
@@ -522,9 +525,9 @@ void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
         DataForCRC[3] = 0xFFFF;
         DataForCRC[4] = ReceivedCRC;
 
-        CRCCalc = CRC16(0, (uint8_t *)DataForCRC, HW_VERSION_SIZE);
+        CRCCalc = CRC16(0, DataForCRC, HW_VERSION_SIZE);
         /*Add received CRC to calculated CRC*/
-        CRCCalc = CRC16(CRCCalc, (uint8_t *)&DataForCRC[4], CRC_LENGTH);
+        CRCCalc = CRC16(CRCCalc, &ReceivedCRC, CRC_LENGTH);
         if(CRCCalc == 0xF0B8)
         {
             /*Correct CRC : save*/
@@ -558,9 +561,9 @@ void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
         DataForCRC[4] = ReceivedCRC;
 
         /*CRC on data*/
-        CRCCalc = CRC16(0, (uint8_t *)DataForCRC, HW_SERIAL_NUMBER_SIZE);
+        CRCCalc = CRC16(0, DataForCRC, HW_SERIAL_NUMBER_SIZE);
         /*Add received CRC to calculated CRC*/
-        CRCCalc = CRC16(CRCCalc, (uint8_t *)&DataForCRC[4], CRC_LENGTH);
+        CRCCalc = CRC16(CRCCalc, &ReceivedCRC, CRC_LENGTH);
 
         if(CRCCalc == 0xF0B8)
         {

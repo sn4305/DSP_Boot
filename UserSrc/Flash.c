@@ -407,7 +407,7 @@ void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea)
         Flag.flag.HW_Ser_H[0] = ((uint16_t)Data[1] << 8) | Data[2];
         Flag.flag.HW_Ser_H[1] = ((uint16_t)Data[3] << 8) | Data[4];
         Flag.flag.HW_Ser_H[2] = ((uint16_t)Data[5] << 8) | Data[6];
-        Flag.flag.HW_Ser_L    = (uint16_t)Data[7];
+        Flag.flag.HW_Ser_L    = (uint16_t)Data[7] << 8;
         /*Write 8 bytes of data*/
         WriteFlash(HW_SERIAL_NUMBER_ADDRESS, &Flag.flag.HW_Ser_H, 4);
     }

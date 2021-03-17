@@ -16,7 +16,7 @@ Dongdong Yang       20210309           00          Init
 
 
 #include "CRC.h"
-
+#include "Flash.h"
 //#include "error_handling.h"
 
 static const uint16_t KermitTable[256]=
@@ -74,13 +74,19 @@ uint16_t UpdateCrcKermit(uint16_t Init_Value, uint8_t value)
 
 /*****CRC calculation for big data with length********/
 #pragma CODE_SECTION(CRC16,".TI.ramfunc");
-uint16_t CRC16(uint16_t reg_init, uint8_t *data, uint16_t len)
+uint16_t CRC16(uint16_t reg_init, uint16_t *data, uint16_t len)
 {
     uint16_t crc_reg = reg_init;
 
-    while(len--)
+    while(len)
     {
-        crc_reg = (crc_reg >> 8) ^ KermitTable[(crc_reg ^ *data++) & 0xff];
+        crc_reg = (crc_reg >> 8) ^ KermitTable[(crc_reg ^ (uint8_t)(*data >> 8)) & 0xff];
+        len--;
+        if(len)
+        {
+            crc_reg = (crc_reg >> 8) ^ KermitTable[(crc_reg ^ (uint8_t)(*data++)) & 0xff];
+            len--;
+        }
     }
 
     return crc_reg;
