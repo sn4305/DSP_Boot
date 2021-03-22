@@ -44,7 +44,7 @@
 
 #define APP_VERSION_ADDRESS             0x0B7FF8    /* Address of Application sw Version*/
 #define APP_CRC_ADDRESS                 0x0B7FFC    /* Address of Application CRC*/
-#define MAX_SN                          0x24u
+#define MAX_SN                          0x25u       /* max sequence number, range: 0x01~0x25*/
 #define MAX_BLOCK_SIZE                  256u
 #define CRC_LENGTH                      2u          /* CRC Length in Bytes*/
 
@@ -115,7 +115,7 @@ uint8_t IsSecurityValid(tCANMsgObject Received_Message);
 
 uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked);
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, uint8_t* Message_Data, St_TransDataInfo *pSt_TransDataInfo);
+uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo);
 
 uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st_TransDataInfo);
 

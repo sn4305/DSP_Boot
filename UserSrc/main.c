@@ -29,6 +29,7 @@ St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
 /* function declaration */
 static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
 static void IdentifyBoot(MyBootSys* Info);
+static void Init_TransParam(St_TransDataInfo *pTran);
 
 /* ******************************************************
   ##define global Macro in different project build configuration
@@ -168,6 +169,7 @@ uint32_t main(void)
                 }
                 else if(UPDATE_APP_RQST == u32UpdataFlag)
                 {/* received boot request from APP, jump to boot*/
+                    Init_TransParam(&st_TransDataInfo);
                     TMR_Start();
                     TMR_SoftwareCounterClear();
                     SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
@@ -175,6 +177,7 @@ uint32_t main(void)
                 }
                 else
                 {
+                    Init_TransParam(&st_TransDataInfo);
                     SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
                     State = State_DEFAULT; // <====== GO DEFAULT
                 }
@@ -237,6 +240,7 @@ uint32_t main(void)
                                 if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
                                 {/* Enter boot mode request : Send positive Response
                                  * No Action*/
+                                    Init_TransParam(&st_TransDataInfo);
                                     SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
                                 }
                                 else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
@@ -278,7 +282,7 @@ uint32_t main(void)
                             else
                             {
                                 SWVersionComparetHandle(g_RXCANMsg, BootStatus, &FlashAuthorization);
-                                //FlashAuthorization = 1;
+                                FlashAuthorization = 1;
                             }
                             break;
 
@@ -326,7 +330,7 @@ uint32_t main(void)
 
                         case CMD_TransferInformation:
                             /* Start timer for timeout*/
-                            error = IsTransferInfoValid(g_RXCANMsg, g_u8rxMsgData, &st_TransDataInfo);
+                            error = IsTransferInfoValid(g_RXCANMsg, &st_TransDataInfo);
                             if (error)
                             {
                                 /* Send error message*/
@@ -415,9 +419,6 @@ uint32_t main(void)
 
                         case CMD_CRCRequest:
                         {
-//                            uint16_t crc16;
-//                            crc16 = CRC16(0x00, g_u8rxMsgData, (uint16_t)g_RXCANMsg.ui32MsgLen);
-//                            SendGenericResponse((uint8_t)(crc16 >> 8), (uint8_t)crc16);
                             error = IsCRCRequestValid(g_RXCANMsg);
                             if(error)
                             {
@@ -554,6 +555,7 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
                         pSt_TransDataInfo->ValidInfo = false;
                         SendGenericResponse(MEMORY_AREA, NO_ERROR);
                     }
+                    ReleaseFlashPump();
 
 //                    if(!WriteError(Received_Message->frame.data0, &ucAppMemoryErase, &ucLogMemoryErase))
 //                    {
@@ -604,6 +606,14 @@ static void IdentifyBoot(MyBootSys* Info)
     }
 }
 
+static void Init_TransParam(St_TransDataInfo *pTran)
+{
+    pTran->Address      = 0;
+    pTran->BSC          = 0;
+    pTran->MemArea      = 0;
+    pTran->Size         = 0;
+    pTran->ValidInfo    = false;
+}
 
 //
 // End of file

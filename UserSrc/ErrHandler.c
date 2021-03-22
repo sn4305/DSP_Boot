@@ -13,6 +13,7 @@ extern const uint16_t u40BootVersion[3];
 extern uint32_t u32UpdataFlag;
 
 extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
+extern uint16_t SwitchBank(uint16_t BankIdx);
 
 static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
@@ -125,12 +126,12 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     return error;
 }
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, uint8_t* Message_Data, St_TransDataInfo *pSt_TransDataInfo)
+uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
 
-    GetInformation(Message_Data, pSt_TransDataInfo);
+    GetInformation(Received_Message.pucMsgData, pSt_TransDataInfo);
     if (Received_Message.ui32MsgLen != 8)
     {
         error = WRONG_REQUEST_FORMAT;
@@ -146,7 +147,7 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, uint8_t* Message_Dat
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if( ((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4) && (ucAppMemoryErase  != true) )
+    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (ucAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
     }
@@ -199,9 +200,9 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(Received_Message.ui32MsgLen != 8)
+    else if(((st_TransDataInfo->MemArea & 0x0F) == 0 || (st_TransDataInfo->MemArea & 0x0F) == 4) && Received_Message.ui32MsgLen != 8)
     {
-        if((st_TransDataInfo->ptr_St_Data->RecvDataIdx + Received_Message.ui32MsgLen - CRC_LENGTH) == st_TransDataInfo->Size + 1)
+        if((st_TransDataInfo->ptr_St_Data->RecvDataIdx + Received_Message.ui32MsgLen - CRC_LENGTH - 1) == st_TransDataInfo->Size)
         {
             error = NO_ERROR;
         }
@@ -391,21 +392,20 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
     if ((MemoryArea & 0x0F) == 0)
     {
         /* Writing app */
-        if (Address < MEM_APPCODE_START_ADDRESS)
+        if (Address < MEM_APPCODE_START_ADDRESS || Address > MEM_APPCODE_END_ADDRESS)
         {
             /* Writing in Bootloader area*/
             ReturnValue = false;
             SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
         }
-        else if (Address > MEM_APPCODE_END_ADDRESS)
-        {
-            /* Writing in Configuration Page
-             * No error sent : Ignore the writing*/
-            ReturnValue = false;
-        }
         else
         {
             ReturnValue = true;
+            /* give flash access, app0 exsit in BANK0*/
+            if(0 != SwitchBank(0))
+            {
+                ReturnValue = false;
+            }
         }
     }
     else if ((MemoryArea & 0x0F) == 4)
@@ -435,6 +435,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
             ReturnValue = true;
         }
     }
+    EDIS;
 
     return ReturnValue;
 }
@@ -443,22 +444,12 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 {
     uint16_t WriteBuf[2];
     uint16_t ReceivedCRC;
-    uint32_t wCRCAddr;
     uint16_t CRCFlash;
-
-    if ((*ReceivedMessage.pucMsgData & 0x0F) == 4)
-    {
-        wCRCAddr = BootStatus.OppositBootCRCAddr;
-    }
-    else
-    {
-        wCRCAddr = APP_CRC_ADDRESS;
-    }
 
     u32UpdataFlag = 0;
     ReceivedCRC = ((uint16_t) ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
 
-    if ((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+    if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
     {
         /*Calculate CRC for boot memory area*/
         CRCFlash = CalcCRC_FLASH(0, BootStatus.OppositBootStartAddr, BOOT_TOTAL_LEN);
@@ -466,10 +457,10 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
     else
     {
         /*Calculate the CRC for app memory area*/
-        CRCFlash = CalcCRC_FLASH(0, MEM_APPCODE_START_ADDRESS, APP_TOTAL_LEN);
+        CRCFlash = CalcCRC_FLASH(0, MEM_APPCODE_START_ADDRESS, APP_TOTAL_LEN - 4);
     }
 
-    if (CRCFlash == ReceivedCRC)
+    if(CRCFlash == ReceivedCRC)
     {
         /*Send OK response */
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
@@ -480,7 +471,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 //            TMR3_Tasks_16BitOperation();
 //        }
         //TMR3_Stop();
-        if ((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+        if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
         {
             WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
             WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);

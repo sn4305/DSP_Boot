@@ -66,24 +66,24 @@ void Init_Flash_Sectors(void)
     Flash1EccRegs.ECC_ENABLE.bit.ENABLE = 0x0;
 
     Fapi_StatusType oReturnCheck;
+    SeizeFlashPump_Bank0();
     oReturnCheck = Fapi_initializeAPI(F021_CPU0_W0_BASE_ADDRESS, 200);
     if(oReturnCheck != Fapi_Status_Success)
     {
         Example_Error(oReturnCheck);
     }
-
-    oReturnCheck = Fapi_initializeAPI(F021_CPU0_W1_BASE_ADDRESS, 200);
-    if(oReturnCheck != Fapi_Status_Success)
-    {
-        Example_Error(oReturnCheck);
-    }
-
     oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank0);
     if(oReturnCheck != Fapi_Status_Success)
     {
         Example_Error(oReturnCheck);
     }
 
+    SeizeFlashPump_Bank1();
+    oReturnCheck = Fapi_initializeAPI(F021_CPU0_W1_BASE_ADDRESS, 200);
+    if(oReturnCheck != Fapi_Status_Success)
+    {
+        Example_Error(oReturnCheck);
+    }
     oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank1);
     if(oReturnCheck != Fapi_Status_Success)
     {
@@ -93,12 +93,44 @@ void Init_Flash_Sectors(void)
     Flash0EccRegs.ECC_ENABLE.bit.ENABLE = 0xA;
     Flash1EccRegs.ECC_ENABLE.bit.ENABLE = 0xA;
     EDIS;
+}
 
-    //
-    // Gain pump semaphore for Bank0.
-    // User may need to do this for Bank1 if programming Bank1.
-    //
-    SeizeFlashPump_Bank0();
+#pragma CODE_SECTION(SwitchBank,".TI.ramfunc");
+uint16_t SwitchBank(uint16_t BankIdx)
+{
+    uint16_t Err_Cnt = 0;
+    Fapi_StatusType oReturnCheck;
+
+    if(0 == BankIdx)
+    {
+        SeizeFlashPump_Bank0();
+        oReturnCheck = Fapi_initializeAPI(F021_CPU0_W0_BASE_ADDRESS, 200);
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Err_Cnt++;
+        }
+        oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank0);
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Err_Cnt++;
+        }
+    }
+    else if(1 == BankIdx)
+    {
+        SeizeFlashPump_Bank1();
+        oReturnCheck = Fapi_initializeAPI(F021_CPU0_W1_BASE_ADDRESS, 200);
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Err_Cnt++;
+        }
+        oReturnCheck = Fapi_setActiveFlashBank(Fapi_FlashBank1);
+        if(oReturnCheck != Fapi_Status_Success)
+        {
+            Err_Cnt++;
+        }
+    }
+
+    return Err_Cnt;
 }
 
 /* Clear HW info inside flag sector, this will keep App valid flag*/
@@ -109,7 +141,7 @@ static void prv_EraseLogisticFlash(void)
     Un_FLAG Flag;
 
     EALLOW;
-    SeizeFlashPump_Bank1();
+    SwitchBank(0);
 
     /*read back AppValid flag first*/
     Flag.flag.App_Valid_Flag = APP_VALID_FLAG;
@@ -142,19 +174,21 @@ static void prv_EraseLogisticFlash(void)
     {
         //            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
     }
+    ReleaseFlashPump();
     EDIS;
 }
 
 /* Clear Application Valid Flag inside flag sector, this will keep HW info*/
 #pragma CODE_SECTION(prv_ClearAppFlag,".TI.ramfunc");
-static void prv_ClearAppFlag(void)
+static uint16_t prv_ClearAppFlag(void)
 {
     Un_FLAG Flag;
-    uint16_t *pFlagAddr, len, i;
+    uint16_t fail = 0;
+    uint16_t *pFlagAddr, i;
     Fapi_StatusType oReturnCheck;
 
     EALLOW;
-    SeizeFlashPump_Bank1();
+    SwitchBank(1);
 
     /*read back HW flag first*/
     pFlagAddr = (uint16_t *)HW_VERSION_ADDRESS;
@@ -180,38 +214,21 @@ static void prv_ClearAppFlag(void)
     {
         /* Error while erasing*/
         SendGenericResponse(MEMORY_AREA, MEMORY_NOT_BLANK);
+        fail = 1;
     }
     else
     {
         /* No Error, send positive response*/
         ucLogMemoryErase = true;
-        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+        fail = 0;
+//        SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
-    for(i = 0; i <= FLAG_TOTAL_LEN/4; i++)
-    {
-        if(i == (FLAG_TOTAL_LEN/4))
-        {
-            len = FLAG_TOTAL_LEN - 4*i;
-        }
-        else
-        {
-            len = 4;
-        }
-        /*Write back AppValid flag, program 4 words at once, 64-bits */
-        oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)FLAG_APPLI_ADDRESS,
-                                                    (uint16_t *)&(Flag.data[4*i]),
-                                                    len,
-                                                    0,
-                                                    0,
-                                                    Fapi_AutoEccGeneration);
-        while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
-        if(oReturnCheck != Fapi_Status_Success)
-        {
-            ;
-        }
-    }
+    fail += WriteFlash(FLAG_APPLI_ADDRESS, Flag.data, FLAG_TOTAL_LEN);
+    ReleaseFlashPump();
     EDIS;
+
+    return fail;
 }
 
 /* Flash Sector Erase
@@ -257,7 +274,7 @@ static int prv_Sector_Erase(uint32_t sectors)
 void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
 {
     uint32_t EraseSector;
-    bool Erase_Err = 0;
+    uint16_t Erase_Err = 0;
 
     if ((MemoryArea & 0x0F) == 1 || (MemoryArea & 0x0F) == 2)
     {
@@ -269,22 +286,26 @@ void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
         {
             if ((MemoryArea & 0x0F) == 0)
             {
-                prv_ClearAppFlag();             /* clear application valid flag with 0x0000*/
+                Erase_Err = prv_ClearAppFlag();             /* clear application valid flag with 0x0000*/
                 EraseSector = APP0_SECTOR;
+                Erase_Err += SwitchBank(0);
             }
             else
             {
                 if(MEM_BOOT1_START_ADDRESS == Info.OppositBootStartAddr)
                 {
                     EraseSector = BOOT1_SECTOR;
+                    Erase_Err += SwitchBank(1);
+
                 }
                 else if(MEM_BOOT0_START_ADDRESS == Info.OppositBootStartAddr)
                 {
                     EraseSector = BOOT0_SECTOR;
+                    Erase_Err += SwitchBank(0);
                 }
             }
             /*Erase all applicative Flash */
-            Erase_Err = prv_Sector_Erase(EraseSector);
+            Erase_Err += prv_Sector_Erase(EraseSector);
             if(Erase_Err)
             {
                 /* Send error message*/
@@ -297,6 +318,7 @@ void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
 //                BSC = 0;
                 SendGenericResponse(MEMORY_AREA, NO_ERROR);
             }
+            ReleaseFlashPump();
 
         }/* If Authorized */
 
@@ -310,7 +332,7 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
 {
     bool Write_Err = true;
     Fapi_StatusType oReturnCheck;
-    uint16_t k, j, fail, miniLen;
+    uint16_t k, j, fail = 0, miniLen;
     uint16_t miniBuffer[4]; //useful for 4-word access to flash with
 
     EALLOW;
@@ -324,46 +346,48 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
         {
             miniLen = 4;
         }
+
         if(miniLen)
         {
             for(j = 0; j < miniLen; j ++)
             {
                 miniBuffer[j] = Data[k * 4 + j];
             }
-        }
-        //check that miniBuffer is not already all erased data
-        if(!((miniBuffer[0] == 0xFFFF) && (miniBuffer[1] == 0xFFFF) && (miniBuffer[2] == 0xFFFF)
-                && (miniBuffer[3] == 0xFFFF)))
-        {
-            //program 4 words at once, 64-bits
-            oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)(Address + k * 4),
-                                                        miniBuffer,
-                                                        miniLen,
-                                                        0,
-                                                        0,
-                                                        Fapi_AutoEccGeneration);
-            while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy);
-            if(oReturnCheck != Fapi_Status_Success)
+            //check that miniBuffer is not already all erased data
+            if(!((miniBuffer[0] == 0xFFFF) && (miniBuffer[1] == 0xFFFF) && (miniBuffer[2] == 0xFFFF)
+                    && (miniBuffer[3] == 0xFFFF)))
             {
-                fail++;
-            }
-#ifdef FLASH_VERIFY
-            for(j = 0; j < 4; j += 2)
-            {
-                uint32_t toVerify = miniBuffer[j+1];
-                toVerify = toVerify << 16;
-                toVerify |= miniBuffer[j];
-                oReturnCheck = Fapi_doVerify((uint32 *)(Address + k * 4 + j),
-                                             1,
-                                             (uint32 *)(&toVerify),
-                                             &oFlashStatusWord);
+                //program 4 words at once, 64-bits
+                oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)(Address + k * 4),
+                                                            miniBuffer,
+                                                            miniLen,
+                                                            0,
+                                                            0,
+                                                            Fapi_AutoEccGeneration);
+                while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy);
                 if(oReturnCheck != Fapi_Status_Success)
                 {
-                    Write_Err = true;
+                    fail++;
                 }
-            } //for j; for Fapi_doVerify
-#endif
-        } //check if miniBuffer does not contain all already erased data
+    #ifdef FLASH_VERIFY
+                for(j = 0; j < 4; j += 2)
+                {
+                    uint32_t toVerify = miniBuffer[j+1];
+                    toVerify = toVerify << 16;
+                    toVerify |= miniBuffer[j];
+                    oReturnCheck = Fapi_doVerify((uint32 *)(Address + k * 4 + j),
+                                                 1,
+                                                 (uint32 *)(&toVerify),
+                                                 &oFlashStatusWord);
+                    if(oReturnCheck != Fapi_Status_Success)
+                    {
+                        Write_Err = true;
+                    }
+                } //for j; for Fapi_doVerify
+    #endif
+            } //check if miniBuffer does not contain all already erased data
+        }
+
     } //for(int k); loads miniBuffer with Buffer elements
 
     EDIS;
@@ -379,12 +403,11 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
 #pragma CODE_SECTION(WriteLogisticInfo,".TI.ramfunc");
 void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea)
 {
-    Fapi_StatusType oReturnCheck;
     uint8_t i = 0;
     Un_FLAG Flag;
     EALLOW;
 
-    SeizeFlashPump_Bank1();
+    SwitchBank(1);
 
     if((MemoryArea & 0x0F) == 1)
     {
@@ -409,9 +432,10 @@ void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea)
         Flag.flag.HW_Ser_H[2] = ((uint16_t)Data[5] << 8) | Data[6];
         Flag.flag.HW_Ser_L    = (uint16_t)Data[7] << 8;
         /*Write 8 bytes of data*/
-        WriteFlash(HW_SERIAL_NUMBER_ADDRESS, &Flag.flag.HW_Ser_H, 4);
+        WriteFlash(HW_SERIAL_NUMBER_ADDRESS, (uint16_t *)&Flag.flag.HW_Ser_H, 4);
     }
 
+    ReleaseFlashPump();
     EDIS;
     return;
 }

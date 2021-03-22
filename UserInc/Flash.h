@@ -63,6 +63,8 @@ void Init_Flash_Sectors(void);
 
 void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info);
 
+uint16_t SwitchBank(uint16_t BankIdx);
+
 uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
 
 void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea);
