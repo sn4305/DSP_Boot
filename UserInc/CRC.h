@@ -21,6 +21,6 @@ uint16_t CalcCRC_Bloc(uint32_t Address, uint16_t LenDataToCopy, uint8_t WriteMem
 
 uint16_t CRC16(uint16_t reg_init, uint16_t *data, uint16_t len);
 
-uint16_t CalcCRC_FLASH(uint16_t Init, uint16_t CodeStartAddr, uint16_t len_word);
+uint16_t CalcCRC_FLASH(uint16_t Init, uint32_t CodeStartAddr, uint32_t len_word);
 
 #endif /* USERINC_CRC_H_ */

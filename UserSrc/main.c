@@ -147,9 +147,6 @@ uint32_t main(void)
 
     IdentifyBoot(&BootStatus);
 
-#ifdef DEMOBOARD
-    State = State_BOOT;
-#endif
     //  ||========================================================||
     //  ||                 Start of State Machine                 ||
     //  ||========================================================||
@@ -428,7 +425,7 @@ uint32_t main(void)
                             {
                                 if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
                                 {
-                                    if(((g_u8rxMsgData[0] & 0x0F) == 0 || (g_u8rxMsgData[0] & 0x0F) == 4) && ucAppMemoryErase)
+                                    if(((g_u8rxMsgData[0] & 0x0F) == 0 || (g_u8rxMsgData[0] & 0x0F) == 4) )//&& ucAppMemoryErase)
                                     {
                                         if(FlashAuthorization) // FlashAuthorization
                                         {

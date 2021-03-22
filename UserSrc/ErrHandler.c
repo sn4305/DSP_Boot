@@ -457,7 +457,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
     else
     {
         /*Calculate the CRC for app memory area*/
-        CRCFlash = CalcCRC_FLASH(0, MEM_APPCODE_START_ADDRESS, APP_TOTAL_LEN - 4);
+        CRCFlash = CalcCRC_FLASH(0, MEM_APPCODE_START_ADDRESS, APP_TOTAL_LEN);
     }
 
     if(CRCFlash == ReceivedCRC)
@@ -479,14 +479,18 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
 //            Erase_Flash(BootStatus.BootValidFlagAddr);
             ucAppMemoryErase = false;
+            DELAY_US(100000L);
             RESET();
         }
         else
         {
+            SwitchBank(1);
             WriteBuf[0] = (uint16_t) APP_VALID;
             WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
             ucAppMemoryErase = false;
+            ReleaseFlashPump();
+            DELAY_US(100000L);
             RESET();
         }
     }
@@ -522,8 +526,9 @@ void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
         if(CRCCalc == 0xF0B8)
         {
             /*Correct CRC : save*/
-            SeizeFlashPump_Bank1();
+            SwitchBank(1);
             WriteFlash(HW_VERSION_ADDRESS, DataForCRC, 5);
+            ReleaseFlashPump();
             SendGenericResponse(MEMORY_AREA, NO_ERROR);
         }
         else

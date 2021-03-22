@@ -97,12 +97,9 @@ uint16_t CRC16(uint16_t reg_init, uint16_t *data, uint16_t len)
 uint16_t _crc16(uint16_t reg_init, uint16_t data)
 {
     uint16_t crc_reg = reg_init;
-    uint8_t tmp;
 
-    tmp = (uint8_t) (crc_reg >>8);
-    crc_reg = UpdateCrcKermit(crc_reg, tmp);
-    tmp = (uint8_t) (crc_reg);
-    crc_reg = UpdateCrcKermit(crc_reg, tmp);
+    crc_reg = UpdateCrcKermit(crc_reg, (uint8_t) (data >>8));
+    crc_reg = UpdateCrcKermit(crc_reg, (uint8_t) data);
 
     return crc_reg;
 }
@@ -137,36 +134,16 @@ uint16_t CalcCRC_Bloc(uint32_t Address, uint16_t LenDataToCopy, uint8_t WriteMem
  *    Return Value:      Calculated CRC16
  ******************************************************************************/
 #pragma CODE_SECTION(CalcCRC_FLASH,".TI.ramfunc");
-uint16_t CalcCRC_FLASH(uint16_t Init, uint16_t CodeStartAddr, uint16_t len_word)
+uint16_t CalcCRC_FLASH(uint16_t Init, uint32_t CodeStartAddr, uint32_t len_word)
 {
-//    #pragma DATA_SECTION(u16FlashReadBuf,".FlashReadBackBuf");
-//    uint16_t u16FlashReadBuf[FlashReadBufSize];
-    uint16_t i, j = 0, CRC;
+    uint16_t  CRC = Init;
+    uint16_t *pAddr = (uint16_t *)CodeStartAddr;
 
-    CRC = Init;
     /* while remain data */
     while(len_word > 0)
     {
-        /* while remain data len more than FlashReadBufSize*/
-        if(len_word >= FlashReadBufSize)
-        {/*First, read the page and store data in words*/
-            for (i = 0; i < FlashReadBufSize; i++)
-            {
-                CRC = _crc16(CRC, Read_Data_Word(i + CodeStartAddr + j * FlashReadBufSize));
-            }
-            len_word -= FlashReadBufSize;
-            /*page index increase*/
-            j++;
-        }
-        else
-        {
-            /* while remain data len less than FlashReadBufSize, it's the last page*/
-            for (i = 0; i < len_word; i++)
-            {
-                CRC = _crc16(CRC, Read_Data_Word(i + CodeStartAddr + j * FlashReadBufSize));
-            }
-            len_word -= len_word;
-        }
+        CRC = _crc16(CRC, Read_Data_Word(pAddr++));
+        len_word--;
     }
 
     return CRC;

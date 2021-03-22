@@ -197,7 +197,7 @@ static uint16_t prv_ClearAppFlag(void)
         if(i < 4)
         {
             /* fill zero in app_valid_flag to disable it*/
-            Flag.data[i] = 0;
+            Flag.data[i] = 0xFFFF;
         }
         else
         {
