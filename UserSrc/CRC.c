@@ -118,6 +118,9 @@ uint16_t CalcCRC_Bloc(uint32_t Address, uint16_t LenDataToCopy, uint8_t WriteMem
     /*Crc on Memory Size*/
     CRCCalc = UpdateCrcKermit(CRCCalc, (uint8_t) (LenDataToCopy >> 8));
     CRCCalc = UpdateCrcKermit(CRCCalc, (uint8_t) (LenDataToCopy));
+
+    ServiceDog();
+
     /*CRC on Data*/
     for (k = 0; k < LenDataToCopy; k++)
     {
@@ -139,6 +142,7 @@ uint16_t CalcCRC_FLASH(uint16_t Init, uint32_t CodeStartAddr, uint32_t len_word)
     uint16_t  CRC = Init;
     uint16_t *pAddr = (uint16_t *)CodeStartAddr;
 
+    ServiceDog();
     /* while remain data */
     while(len_word > 0)
     {

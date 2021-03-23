@@ -108,7 +108,7 @@ SECTIONS
 #define   BOOT_PN     BOOT1_PN
 #define   BEGIN       BOOT1_START
 #define   VALID_FLAG  BOOT1_VALID
-#else
+#elif defined (__IS_STANDALONE) && defined (__IS_EVEN)
 #define   text_sector (FLASHB | FLASHC | FLASHD)
 #define   init_sector FLASHB
 #define   BOOT_PN     BOOT0_PN
@@ -118,6 +118,10 @@ SECTIONS
 
 #ifndef __IS_STANDALONE
 #define   BEGIN       PREBOOT_START
+#define   text_sector (FLASHB | FLASHC | FLASHD)
+#define   init_sector FLASHB
+#define   BOOT_PN     BOOT0_PN
+#define   VALID_FLAG  BOOT0_VALID
 #endif
 
    codestart           : > BEGIN       		PAGE = 0, ALIGN(4)
@@ -166,7 +170,6 @@ SECTIONS
    /* user defined sections */
    .boot_ver           : > BOOT_PN      PAGE = 0
    .boot_valid         : > VALID_FLAG   PAGE = 0
-   .FlashReadBackBuf   : > RAMGS3   	PAGE = 1
    .updataflag         : > UPDATE_FLAG  PAGE = 0, TYPE = NOLOAD
    .reset              : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
    

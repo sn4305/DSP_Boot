@@ -61,7 +61,7 @@ typedef union
 
 void Init_Flash_Sectors(void);
 
-void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info);
+void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag);
 
 uint16_t SwitchBank(uint16_t BankIdx);
 

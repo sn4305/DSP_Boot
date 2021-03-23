@@ -105,6 +105,14 @@ typedef struct
     St_TransData   *ptr_St_Data;    /* St_TransData pointer, used to restore received data */
 }St_TransDataInfo;
 
+typedef struct
+{
+    bool            ucSecurityUnlocked;      /* Security Unlocked Flag, handled in CMD_SecurityAccess */
+    bool            ucAppMemoryErase;        /* Application Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
+    bool            ucLogMemoryErase;        /* Logistic Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
+    bool            FlashAuthorization;      /* Flash Authorization Flag,  updated in State_BOOT state overtime handler and DEFAULT_MODE request handler*/
+}St_BootFlag, *pSt_BootFlag;
+
 uint8_t IsRequestValid(tCANMsgObject Received_Message);
 
 uint8_t IsLogisticValid(tCANMsgObject Received_Message);
@@ -123,7 +131,7 @@ uint8_t IsCRCRequestValid(tCANMsgObject Received_Message);
 
 void LogiticRequestHandle(uint8_t Identifier);
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, bool* Authorization);
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag);
 
 bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info);
 

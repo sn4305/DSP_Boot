@@ -5,14 +5,20 @@
  *      Author: E9981231
  */
 
+#include <Interrupt.h>
 #include "Timer.h"
 #include "F28x_Project.h"
-#include "interrupt.h"
 
 /* defined in interrupt.c */
 extern volatile uint16_t u16Tick;
-extern volatile uint16_t u16TimTick;
-extern bool Timer_Start_Flag;
+
+/* used for 5s boot overtime */
+TMR_OBJ tmr1_obj;
+/* used for transData and flash overtime */
+TMR_OBJ tmr2_obj;
+
+static void EnableDog(void);
+
 //
 // Init_Timer - Initialize cpu timer
 //
@@ -56,6 +62,11 @@ void Init_Timer(void)
 // Enable TINT0 in the PIE: Group 1 interrupt 7
 //
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+
+#ifndef __IS_DEBUG
+    /*enable watchdog*/
+    EnableDog();
+#endif
 }
 
 #pragma CODE_SECTION(Get_SysTick,".TI.ramfunc");
@@ -70,50 +81,60 @@ void Clr_SysTick(void)
     u16Tick = 0;
 }
 
-#pragma CODE_SECTION(TMR_Start,".TI.ramfunc");
-void TMR_Start(void)
+#pragma CODE_SECTION(TMR1_Start,".TI.ramfunc");
+void TMR1_Start(void)
 {
-    Timer_Start_Flag = 1;
+    tmr1_obj.Start_Flag = true;
 }
 
-#pragma CODE_SECTION(TMR_Stop,".TI.ramfunc");
-void TMR_Stop(void)
+#pragma CODE_SECTION(TMR1_Stop,".TI.ramfunc");
+void TMR1_Stop(void)
 {
-    Timer_Start_Flag = 0;
+    tmr1_obj.Start_Flag = false;
 }
 
-#pragma CODE_SECTION(TMR_SoftwareCounterClear,".TI.ramfunc");
-void TMR_SoftwareCounterClear(void)
+#pragma CODE_SECTION(TMR1_SoftwareCounterClear,".TI.ramfunc");
+void TMR1_SoftwareCounterClear(void)
 {
-    u16TimTick = 0;
+    tmr1_obj.count = 0;
 }
 
-#pragma CODE_SECTION(TMR_SoftwareCounterGet,".TI.ramfunc");
-uint16_t TMR_SoftwareCounterGet(void)
+#pragma CODE_SECTION(TMR1_SoftwareCounterGet,".TI.ramfunc");
+uint16_t TMR1_SoftwareCounterGet(void)
 {
-    return u16TimTick;
+    return tmr1_obj.count;
 }
 
-#pragma CODE_SECTION(TMR3_Start,".TI.ramfunc");
-void TMR3_Start(void)
+#pragma CODE_SECTION(TMR2_Start,".TI.ramfunc");
+void TMR2_Start(void)
 {
-//    Timer3_Start_Flag = 1;
+    tmr2_obj.Start_Flag = true;
 }
 
-#pragma CODE_SECTION(TMR3_Stop,".TI.ramfunc");
-void TMR3_Stop(void)
+#pragma CODE_SECTION(TMR2_Stop,".TI.ramfunc");
+void TMR2_Stop(void)
 {
-//    Timer3_Start_Flag = 0;
+    tmr2_obj.Start_Flag = false;
 }
 
-#pragma CODE_SECTION(TMR3_SoftwareCounterGet,".TI.ramfunc");
-uint16_t TMR3_SoftwareCounterGet(void)
+#pragma CODE_SECTION(TMR2_SoftwareCounterGet,".TI.ramfunc");
+uint16_t TMR2_SoftwareCounterGet(void)
 {
-//    return u16Tim3Tick;
+    return tmr2_obj.count;
 }
 
-#pragma CODE_SECTION(TMR3_SoftwareCounterClear,".TI.ramfunc");
-void TMR3_SoftwareCounterClear(void)
+#pragma CODE_SECTION(TMR2_SoftwareCounterClear,".TI.ramfunc");
+void TMR2_SoftwareCounterClear(void)
 {
-//    u16Tim3Tick = 0;
+    tmr2_obj.count = 0;
+}
+
+static inline void EnableDog(void)
+{
+//
+// Enable the watchdog, 000 WDCLK = INTOSC1/512/1, 1tick period: 51.2us, overtime:51.2us*256 = 13ms
+//
+    EALLOW;
+    WdRegs.WDCR.all = 0x0028;
+    EDIS;
 }

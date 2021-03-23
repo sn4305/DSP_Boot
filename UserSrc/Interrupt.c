@@ -5,13 +5,12 @@
  *      Author: E9981231
  */
 
-#include "interrupt.h"
+#include <Interrupt.h>
 
 
 /* global variable, only be modified in CAN rx interrupt function and Timer.c */
 volatile uint16_t u16Tick = 0;
-volatile uint16_t u16TimTick = 0;
-bool Timer_Start_Flag = 0;
+extern TMR_OBJ tmr1_obj, tmr2_obj;
 
 /* global variable, only be modified in CAN rx interrupt function, and read by main state machine */
 volatile bool CAN_RX_Flag = 0;
@@ -32,9 +31,13 @@ __interrupt void cpu_timer0_isr(void)
 
     u16Tick++;  /* for test */
 
-    if(Timer_Start_Flag)
+    if(tmr1_obj.Start_Flag)
     {/* need consider u16TimTick overflow when use this*/
-        u16TimTick++;
+        tmr1_obj.count++;
+    }
+    if(tmr2_obj.Start_Flag)
+    {
+        tmr2_obj.count++;
     }
    //
    // Acknowledge this interrupt to receive more interrupts from group 1

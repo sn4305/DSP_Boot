@@ -8,7 +8,7 @@
 #include "ErrHandler.h"
 #include "CRC.h"
 
-extern bool ucSecurityUnlocked, ucAppMemoryErase, ucLogMemoryErase, ReceivedInfo, FlashAuthorization;
+extern St_BootFlag st_BootFlag;
 extern const uint16_t u40BootVersion[3];
 extern uint32_t u32UpdataFlag;
 
@@ -136,7 +136,7 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(ucSecurityUnlocked != true)
+    else if(st_BootFlag.ucSecurityUnlocked != true)
     {
         error = SECURITY_LOCKED;
     }
@@ -147,11 +147,11 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (ucAppMemoryErase  != true) )
+    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (st_BootFlag.ucAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
     }
-    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && ucLogMemoryErase != true)
+    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && st_BootFlag.ucLogMemoryErase != true)
     {
         error = MEMORY_NOT_BLANK;
     }
@@ -180,13 +180,14 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
-
-    if(TMR3_SoftwareCounterGet() >= 10){ /*50ms*/
-        /*Timeout*/
+#ifndef __IS_DEBUG
+    if(TMR2_SoftwareCounterGet() >= 5)
+    {
+        /*50msTimeout*/
         error = TIMEOUT;
-        TMR3_SoftwareCounterClear();
+        TMR2_SoftwareCounterClear();
     }
-
+#endif
     if(!(st_TransDataInfo->ValidInfo))
     {
         error = WRONG_REQUEST_FORMAT;
@@ -338,7 +339,7 @@ void LogiticRequestHandle(uint8_t Identifier)
     }
 }
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, bool* Authorization)
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag)
 {
     uint16_t *pVer;
     uint32_t PN_Addr;
@@ -376,11 +377,11 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, boo
     }
     if(DiffErr)
     {
-        *Authorization = true;
+        ptr_st_BootFlag->FlashAuthorization = true;
     }
     else
     {
-        *Authorization = false;
+        ptr_st_BootFlag->FlashAuthorization = false;
     }
     SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }
@@ -464,13 +465,8 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
     {
         /*Send OK response */
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
-//        ClrWdt();
-//        TMR3_Start();
-        /*Wait for frame transmission*/
-//        while (TMR3_SoftwareCounterGet() <= 5) {
-//            TMR3_Tasks_16BitOperation();
-//        }
-        //TMR3_Stop();
+        ServiceDog();
+
         if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
         {
             WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
@@ -478,7 +474,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 
             WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
 //            Erase_Flash(BootStatus.BootValidFlagAddr);
-            ucAppMemoryErase = false;
+            st_BootFlag.ucAppMemoryErase = false;
             DELAY_US(100000L);
             RESET();
         }
@@ -488,7 +484,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteBuf[0] = (uint16_t) APP_VALID;
             WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
-            ucAppMemoryErase = false;
+            st_BootFlag.ucAppMemoryErase = false;
             ReleaseFlashPump();
             DELAY_US(100000L);
             RESET();

@@ -11,6 +11,7 @@
 #include "F28x_Project.h"
 #include "cancom.h"
 #include "ErrHandler.h"
+#include "Timer.h"
 
 extern volatile bool CAN_RX_Flag;
 extern volatile CAN_CMD g_enumCAN_Command;

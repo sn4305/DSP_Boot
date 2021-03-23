@@ -16,12 +16,11 @@ Dongdong Yang       20210225           00          Init for Base project 2nd DSP
 
 #include "main.h"
 
-#define  __IS_DEBUG
-
 BootMachineStates State = State_TRANSITION;
 static MyBootSys BootStatus;
 uint16_t s_u16Configuration = 0; //OBC address configuration
-bool ucSecurityUnlocked = 0, ucAppMemoryErase = 0, ucLogMemoryErase = 0, FlashAuthorization = 0;
+St_BootFlag st_BootFlag = {false, false, false, false};
+pSt_BootFlag ptr_st_BootFlag = &st_BootFlag;
 uint8_t RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
 St_TransData st_TransData = {0, RecvBuf, 0};
 St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
@@ -30,6 +29,7 @@ St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
 static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
 static void IdentifyBoot(MyBootSys* Info);
 static void Init_TransParam(St_TransDataInfo *pTran);
+static void Init_BootFlag(void);
 
 /* ******************************************************
   ##define global Macro in different project build configuration
@@ -127,7 +127,6 @@ uint32_t main(void)
     // Initialize the CANA.
     //
     InitCana();
-
     Init_Timer();
 
     //
@@ -143,8 +142,11 @@ uint32_t main(void)
     //
     CANEnable(CANA_BASE);
 
-    State = State_TRANSITION;
+    ServiceDog();
 
+    State = State_TRANSITION;
+    Init_BootFlag();
+    Init_TransParam(&st_TransDataInfo);
     IdentifyBoot(&BootStatus);
 
     //  ||========================================================||
@@ -159,22 +161,25 @@ uint32_t main(void)
             case State_TRANSITION:
                 if( UPDATE_APP_RQST != u32UpdataFlag && APP_VALID ==  APP_VALID_FLAG)
                 {/* FlagAppli is valid, jump to APP*/
-                    TMR_Stop();
-                    TMR_SoftwareCounterClear();
+#ifndef __IS_DEBUG
+                    TMR1_Stop();
+                    TMR1_SoftwareCounterClear();
+#endif
                     DELAY_US(200000L);
                     StartApplication();
                 }
                 else if(UPDATE_APP_RQST == u32UpdataFlag)
                 {/* received boot request from APP, jump to boot*/
-                    Init_TransParam(&st_TransDataInfo);
-                    TMR_Start();
-                    TMR_SoftwareCounterClear();
+#ifndef __IS_DEBUG
+                    TMR1_Start();
+                    TMR1_SoftwareCounterClear();
+#endif
                     SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
                     State = State_BOOT; // <====== GO BOOT
                 }
                 else
                 {
-                    Init_TransParam(&st_TransDataInfo);
+
                     SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
                     State = State_DEFAULT; // <====== GO DEFAULT
                 }
@@ -183,6 +188,7 @@ uint32_t main(void)
     //  ||                 STATE: DEFAULT                         ||
     //  ||========================================================||
             case State_DEFAULT:
+                ServiceDog();
                 if(CAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
@@ -209,19 +215,25 @@ uint32_t main(void)
     //  ||                 STATE: BOOT                            ||
     //  ||========================================================||
             case State_BOOT:
-                if (TMR_SoftwareCounterGet() >= 500)
+#ifndef __IS_DEBUG
+                if (TMR1_SoftwareCounterGet() >= 500)
                 { /*500 * 10ms = 5000ms */
                     /*5s Timeout*/
                     u32UpdataFlag = 0;
-                    TMR_SoftwareCounterClear();
+                    Init_BootFlag();
+                    DINT;
+                    TMR1_SoftwareCounterClear();
                     DELAY_US(200000L);
                     RESET();
                 }
+                ServiceDog();
+#endif
+
                 /*Wait for message*/
                 if(CAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
-                    TMR_SoftwareCounterClear();
+                    TMR1_SoftwareCounterClear();
                     uint8_t error = NO_ERROR;
                     switch(g_enumCAN_Command)
                     {
@@ -244,6 +256,7 @@ uint32_t main(void)
                                 {
                                     /* Reset*/
                                     u32UpdataFlag = 0;
+                                    Init_BootFlag();
                                     DINT;
                                     DELAY_US(200000L);
                                     RESET();
@@ -278,8 +291,9 @@ uint32_t main(void)
                             }
                             else
                             {
-                                SWVersionComparetHandle(g_RXCANMsg, BootStatus, &FlashAuthorization);
-                                FlashAuthorization = 1;
+                                SWVersionComparetHandle(g_RXCANMsg, BootStatus, ptr_st_BootFlag);
+                                //debug use
+                                ptr_st_BootFlag->FlashAuthorization = true;
                             }
                             break;
 
@@ -290,12 +304,12 @@ uint32_t main(void)
                                 if(!error)
                                 {
                                     /* Security successfully unlocked*/
-                                    ucSecurityUnlocked = true;
+                                    st_BootFlag.ucSecurityUnlocked = true;
                                 }
                                 else
                                 {
                                     /* Security successfully unlocked*/
-                                    ucSecurityUnlocked = false;
+                                    st_BootFlag.ucSecurityUnlocked = false;
                                 }
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
@@ -306,7 +320,7 @@ uint32_t main(void)
                             break;
 
                         case CMD_EraseMemory:
-                            error = IsEraseValid(g_RXCANMsg, ucSecurityUnlocked);
+                            error = IsEraseValid(g_RXCANMsg, st_BootFlag.ucSecurityUnlocked);
                             if(error)
                             {
                                 /* Error case : send NOK*/
@@ -316,7 +330,7 @@ uint32_t main(void)
                             {
                                 if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
                                 {
-                                    EraseFlash(g_u8rxMsgData[0], FlashAuthorization, BootStatus);
+                                    EraseFlash(g_u8rxMsgData[0], BootStatus, ptr_st_BootFlag);
                                 }
                                 else
                                 {
@@ -326,7 +340,12 @@ uint32_t main(void)
                             break;
 
                         case CMD_TransferInformation:
+#ifndef __IS_DEBUG
                             /* Start timer for timeout*/
+                            TMR2_Start();
+                            /* Initialize counter*/
+                            TMR2_SoftwareCounterClear();
+#endif
                             error = IsTransferInfoValid(g_RXCANMsg, &st_TransDataInfo);
                             if (error)
                             {
@@ -371,7 +390,7 @@ uint32_t main(void)
                                     if (error == SAME_SN)
                                     {
                                         /* Same sequence number as previous frame: ignore the frame*/
-                                        TMR3_SoftwareCounterClear();
+                                        TMR2_SoftwareCounterClear();
                                     }
                                     else
                                     {
@@ -383,7 +402,7 @@ uint32_t main(void)
                                 else if(MEMORY_AREA == st_TransDataInfo.MemArea || (st_TransDataInfo.MemArea & 0x0F) == 4)
                                 {
                                     /* Reset timeout counter*/
-                                    TMR3_SoftwareCounterClear();
+                                    TMR2_SoftwareCounterClear();
                                     st_TransDataInfo.ptr_St_Data->SN++;
                                     /* Receive data*/
                                     TreatData(g_u8rxMsgData, &st_TransDataInfo);
@@ -416,6 +435,8 @@ uint32_t main(void)
 
                         case CMD_CRCRequest:
                         {
+                            TMR2_Stop();
+                            TMR2_SoftwareCounterClear();
                             error = IsCRCRequestValid(g_RXCANMsg);
                             if(error)
                             {
@@ -427,9 +448,9 @@ uint32_t main(void)
                                 {
                                     if(((g_u8rxMsgData[0] & 0x0F) == 0 || (g_u8rxMsgData[0] & 0x0F) == 4) )//&& ucAppMemoryErase)
                                     {
-                                        if(FlashAuthorization) // FlashAuthorization
+                                        if(st_BootFlag.FlashAuthorization) // FlashAuthorization
                                         {
-//                                            ClrWdt();
+                                            ServiceDog();
                                             CRCWrite(g_RXCANMsg, BootStatus);
                                         }
                                     }
@@ -500,7 +521,7 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
     }
     if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx == pSt_TransDataInfo->Size + CRC_LENGTH)
     {
-        if (FlashAuthorization == 1)
+        if (st_BootFlag.FlashAuthorization == true)
         {
             /* All data received form consecutive frames
              * Extract CRC from last Frame */
@@ -513,7 +534,7 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
             {
                 /*Write data to FLASH*/
                 bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->Address, pSt_TransDataInfo->MemArea, BootStatus);
-//                ClrWdt();
+                ServiceDog();
                 if(CorrectArea)
                 {
                     /*Fill DataToCopy with 0xFF*/
@@ -535,13 +556,13 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
                         {
                             /* Problem in app Memory Area
                              * Reset indicators */
-                            ucAppMemoryErase = false;
+                            st_BootFlag.ucAppMemoryErase = false;
                             pSt_TransDataInfo->ValidInfo = false;
                         }
                         else
                         {
                             /*Problem in Logistic memory Area*/
-                            ucLogMemoryErase = false;
+                            st_BootFlag.ucLogMemoryErase = false;
                         }
                         /* Send error*/
                         SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
@@ -554,11 +575,6 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
                     }
                     ReleaseFlashPump();
 
-//                    if(!WriteError(Received_Message->frame.data0, &ucAppMemoryErase, &ucLogMemoryErase))
-//                    {
-//                        /*Read Flash back and check it*/
-//                        CheckFlash(Address, LenDataToCopy, DataToFlash, MemoryArea);
-//                    }
                 }
                 else
                 {
@@ -610,6 +626,14 @@ static void Init_TransParam(St_TransDataInfo *pTran)
     pTran->MemArea      = 0;
     pTran->Size         = 0;
     pTran->ValidInfo    = false;
+}
+
+static void Init_BootFlag(void)
+{
+    ptr_st_BootFlag->ucSecurityUnlocked      = false;
+    ptr_st_BootFlag->FlashAuthorization      = false;
+    ptr_st_BootFlag->ucAppMemoryErase        = false;
+    ptr_st_BootFlag->ucLogMemoryErase        = false;
 }
 
 //

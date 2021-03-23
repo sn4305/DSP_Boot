@@ -8,7 +8,7 @@
 #include "F28x_Project.h"
 #include "F021_F2837xS_C28x.h"
 
-extern bool ucLogMemoryErase, ucAppMemoryErase;
+extern St_BootFlag st_BootFlag;
 
 static const Uint32 sectAddress[FLASH_SECTOR_NUM] =
 {
@@ -158,7 +158,7 @@ static void prv_EraseLogisticFlash(void)
     else
     {
         /* No Error, send positive response*/
-        ucLogMemoryErase = true;
+        st_BootFlag.ucLogMemoryErase = true;
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
@@ -219,7 +219,7 @@ static uint16_t prv_ClearAppFlag(void)
     else
     {
         /* No Error, send positive response*/
-        ucLogMemoryErase = true;
+        st_BootFlag.ucLogMemoryErase = true;
         fail = 0;
 //        SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
@@ -248,6 +248,7 @@ static int prv_Sector_Erase(uint32_t sectors)
     {
         if( (sectors & 0x00000001) == 0x00000001 )
         {
+            ServiceDog();
             oReturnCheck = Fapi_issueAsyncCommandWithAddress(Fapi_EraseSector,
                     (uint32 *)(sectAddress[i]));
 
@@ -271,7 +272,7 @@ static int prv_Sector_Erase(uint32_t sectors)
 }
 
 #pragma CODE_SECTION(EraseFlash,".TI.ramfunc");
-void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
+void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag)
 {
     uint32_t EraseSector;
     uint16_t Erase_Err = 0;
@@ -282,7 +283,7 @@ void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
     }
     else
     {
-        if (Authorization)
+        if (ptr_st_BootFlag->FlashAuthorization)
         {
             if ((MemoryArea & 0x0F) == 0)
             {
@@ -304,6 +305,7 @@ void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
                     Erase_Err += SwitchBank(0);
                 }
             }
+            ServiceDog();
             /*Erase all applicative Flash */
             Erase_Err += prv_Sector_Erase(EraseSector);
             if(Erase_Err)
@@ -314,7 +316,7 @@ void EraseFlash(uint8_t MemoryArea, bool Authorization, MyBootSys Info)
             else
             {
                 /*Send OK*/
-                ucAppMemoryErase = true;
+                ptr_st_BootFlag->ucAppMemoryErase = true;
 //                BSC = 0;
                 SendGenericResponse(MEMORY_AREA, NO_ERROR);
             }
