@@ -317,7 +317,6 @@ void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag
             {
                 /*Send OK*/
                 ptr_st_BootFlag->ucAppMemoryErase = true;
-//                BSC = 0;
                 SendGenericResponse(MEMORY_AREA, NO_ERROR);
             }
             ReleaseFlashPump();

@@ -186,6 +186,7 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
         /*50msTimeout*/
         error = TIMEOUT;
         TMR2_SoftwareCounterClear();
+        return error;
     }
 #endif
     if(!(st_TransDataInfo->ValidInfo))
@@ -401,11 +402,14 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
         }
         else
         {
-            ReturnValue = true;
             /* give flash access, app0 exsit in BANK0*/
             if(0 != SwitchBank(0))
             {
                 ReturnValue = false;
+            }
+            else
+            {
+                ReturnValue = true;
             }
         }
     }
@@ -418,7 +422,30 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
         }
         else
         {
-            ReturnValue = true;
+            if( 0 == Info.BootPolarity)
+            {
+                /*current boot is EVEN in bank0, need switch bank to 1 to write data*/
+                if(0 != SwitchBank(1))
+                {
+                    ReturnValue = false;
+                }
+                else
+                {
+                    ReturnValue = true;
+                }
+            }
+            else if( 1 == Info.BootPolarity)
+            {
+                /*current boot is ODD in bank1, need switch bank to 0 to write data*/
+                if(0 != SwitchBank(0))
+                {
+                    ReturnValue = false;
+                }
+                else
+                {
+                    ReturnValue = true;
+                }
+            }
         }
     }
     else
@@ -469,14 +496,19 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 
         if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
         {
+            if(0 == BootStatus.BootPolarity)
+            {
+                SwitchBank(1);
+            }
+            else
+            {
+                SwitchBank(0);
+            }
             WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
             WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);
 
             WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
-//            Erase_Flash(BootStatus.BootValidFlagAddr);
             st_BootFlag.ucAppMemoryErase = false;
-            DELAY_US(100000L);
-            RESET();
         }
         else
         {
@@ -485,10 +517,10 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
             st_BootFlag.ucAppMemoryErase = false;
-            ReleaseFlashPump();
-            DELAY_US(100000L);
-            RESET();
         }
+        ReleaseFlashPump();
+        DELAY_US(100000L);
+        RESET();
     }
     else
     {

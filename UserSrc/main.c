@@ -292,8 +292,6 @@ uint32_t main(void)
                             else
                             {
                                 SWVersionComparetHandle(g_RXCANMsg, BootStatus, ptr_st_BootFlag);
-                                //debug use
-                                ptr_st_BootFlag->FlashAuthorization = true;
                             }
                             break;
 

@@ -48,8 +48,8 @@
 #define MAX_BLOCK_SIZE                  256u
 #define CRC_LENGTH                      2u          /* CRC Length in Bytes*/
 
-#define BOOT_TOTAL_LEN                  0x5FF4u     /* Boot sector Length in 16bits*/
-#define APP_TOTAL_LEN                   0x2FFFCul   /* App sector Length in 16bits */
+#define BOOT_TOTAL_LEN                  0x5FF8u     /* Boot sector Length in 16bits, include Boot PN*/
+#define APP_TOTAL_LEN                   0x2FFFCu    /* App sector Length in 16bits, include APP PN */
 
 #define FLAG_TOTAL_LEN                  17u
 #define FLAG_APPLI_ADDRESS              0x000C6000  /* Address of application valid Flag*/
