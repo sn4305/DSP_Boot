@@ -320,6 +320,7 @@
 									<listOptionValue builtIn="false" value="__IS_DEBUG"/>
 									<listOptionValue builtIn="false" value="__IS_SYSTEM"/>
 								</option>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ADVICE__PERFORMANCE.53064793" name="Provide advice on optimization techniques (--advice:performance)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ADVICE__PERFORMANCE" value="--advice:performance=all" valueType="string"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__C_SRCS.421907414" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__C_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__CPP_SRCS.748633722" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__CPP_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__ASM_SRCS.1267422564" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__ASM_SRCS"/>
@@ -412,7 +413,12 @@
 								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ABI.1798938857" name="Application binary interface [See 'General' page to edit] (--abi)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ABI" useByScannerDiscovery="false" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ABI.coffabi" valueType="enumerated"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.DEFINE.1770331103" name="Pre-define NAME (--define, -D)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.DEFINE" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="CPU1"/>
+									<listOptionValue builtIn="false" value="__IS_DEBUG"/>
 									<listOptionValue builtIn="false" value="__IS_ODD"/>
+									<listOptionValue builtIn="false" value="__IS_STANDALONE"/>
+								</option>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ADVICE__PERFORMANCE.2087120121" name="Provide advice on optimization techniques (--advice:performance)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ADVICE__PERFORMANCE" value="--advice:performance=all" valueType="string"/>
+								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ASM_DEFINE.1485433519" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.ASM_DEFINE" valueType="stringList">
 									<listOptionValue builtIn="false" value="__IS_STANDALONE"/>
 								</option>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__C_SRCS.1562322247" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compiler.inputType__C_SRCS"/>
@@ -448,11 +454,11 @@
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_18.12.exeLinker.inputType__GEN_CMDS.539952552" name="Generated Linker Command Files" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.exeLinker.inputType__GEN_CMDS"/>
 							</tool>
 							<tool id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.489853055" name="C2000 Hex Utility" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex">
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.TOOL_ENABLE.90708531" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.TOOL_ENABLE" value="true" valueType="boolean"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.MEMWIDTH.197523041" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.MEMWIDTH" value="16" valueType="string"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER.1029190443" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER.MS" valueType="enumerated"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ROMWIDTH.1347634298" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ROMWIDTH" value="16" valueType="string"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT.1494719944" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT.INTEL" valueType="enumerated"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.TOOL_ENABLE.90708531" name="Enable tool" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.TOOL_ENABLE" value="true" valueType="boolean"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.MEMWIDTH.197523041" name="Specify memory width (--memwidth, -memwidth=width)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.MEMWIDTH" value="16" valueType="string"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER.1029190443" name="Specify data ordering (endianness) (--order, -order)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ORDER.MS" valueType="enumerated"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ROMWIDTH.1347634298" name="Specify rom width (--romwidth, -romwidth=width)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.ROMWIDTH" value="16" valueType="string"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT.1494719944" name="Output format" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.hex.OUTPUT_FORMAT.INTEL" valueType="enumerated"/>
 							</tool>
 						</toolChain>
 					</folderInfo>

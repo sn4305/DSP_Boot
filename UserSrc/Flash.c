@@ -236,11 +236,12 @@ static uint16_t prv_ClearAppFlag(void)
  *  sectors: bit0 refers to sector A, bit1 refers to sector B
  *  if bitx == 1, means erase corresponded sector*/
 #pragma CODE_SECTION(prv_Sector_Erase,".TI.ramfunc");
-static int prv_Sector_Erase(uint32_t sectors)
+int prv_Sector_Erase(uint32_t sectors)
 {
 
     uint16_t i = 0;
     Fapi_StatusType oReturnCheck;
+    Fapi_FlashStatusType FlashStatus;
     uint16_t fail = 0;
 
     EALLOW;
@@ -248,7 +249,6 @@ static int prv_Sector_Erase(uint32_t sectors)
     {
         if( (sectors & 0x00000001) == 0x00000001 )
         {
-            ServiceDog();
             oReturnCheck = Fapi_issueAsyncCommandWithAddress(Fapi_EraseSector,
                     (uint32 *)(sectAddress[i]));
 
@@ -264,6 +264,7 @@ static int prv_Sector_Erase(uint32_t sectors)
             while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy)
             {
             }
+            FlashStatus = Fapi_getFsmStatus();
         }
         sectors = sectors >> 1;
     }

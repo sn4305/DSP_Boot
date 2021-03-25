@@ -14,12 +14,14 @@ PAGE 0 :  /* Program Memory */
    RAMLS2      		: origin = 0x009000, length = 0x000800
    RAMLS3      		: origin = 0x009800, length = 0x000800
    RAMLS4      		: origin = 0x00A000, length = 0x000800
+   RAMGS2           : origin = 0x00E000, length = 0x001000
    RAMGS14     		: origin = 0x01A000, length = 0x001000
    RAMGS15     		: origin = 0x01B000, length = 0x001000
    RESET           	: origin = 0x3FFFC0, length = 0x000002
    
    /* Flash BANK0 sectors */
-   FLASHA           : origin = 0x080002, length = 0x001FFE	/* on-chip Flash, PreBootloader program start */
+   FLASHA           : origin = 0x080002, length = 0x000FFE	/* on-chip Flash, PreBootloader program start */
+   EXIT             : origin = 0x081000, length = 0x001000	/* on-chip Flash, PreBootloader program start */
    BOOT0_START      : origin = 0x082000, length = 0x000002	/* on-chip Flash, Bootloader0 program start */
    FLASHB           : origin = 0x082002, length = 0x001FFE	/* on-chip Flash */
    FLASHC           : origin = 0x084000, length = 0x002000	/* on-chip Flash */
@@ -78,7 +80,7 @@ PAGE 1 : /* Data Memory */
 
    RAMGS0      : origin = 0x00C000, length = 0x001000
    RAMGS1      : origin = 0x00D000, length = 0x001000
-   RAMGS2      : origin = 0x00E000, length = 0x001000
+
    RAMGS3      : origin = 0x00F000, length = 0x001000
    RAMGS4      : origin = 0x010000, length = 0x001000
    RAMGS5      : origin = 0x011000, length = 0x001000
@@ -125,7 +127,6 @@ SECTIONS
 #endif
 
    codestart           : > BEGIN       		PAGE = 0, ALIGN(4)
-
    .text               : >> text_sector     PAGE = 0, ALIGN(4)
    .cinit              : > init_sector      PAGE = 0, ALIGN(4)
    .pinit              : > init_sector      PAGE = 0, ALIGN(4)
@@ -136,12 +137,17 @@ SECTIONS
 	/* user defined sections */
 #ifndef __IS_STANDALONE
    .preboot            : > FLASHA       	PAGE = 0, ALIGN(4)
+   exitboot            : > EXIT       		PAGE = 0, ALIGN(4)
 #endif
 
 #ifdef __TI_COMPILER_VERSION__
    #if __TI_COMPILER_VERSION__ >= 15009000
-    .TI.ramfunc : {} LOAD = text_sector,
-                         RUN = RAMLS0 | RAMLS1 | RAMLS2 |RAMLS3,
+   		GROUP
+        {
+            .TI.ramfunc
+            { -l F021_API_F2837xS_FPU32.lib}
+        }                LOAD = text_sector,
+                         RUN = RAMGS2,
                          LOAD_START(_RamfuncsLoadStart),
                          LOAD_SIZE(_RamfuncsLoadSize),
                          LOAD_END(_RamfuncsLoadEnd),
@@ -150,17 +156,22 @@ SECTIONS
                          RUN_END(_RamfuncsRunEnd),
                          PAGE = 0, ALIGN(4)
    #else
-   ramfuncs            : LOAD = text_sector,
-                         RUN = RAMLS0 | RAMLS1 | RAMLS2 |RAMLS3,
+        GROUP
+        {
+            ramfuncs
+            { -l F021_API_F2837xS_FPU32.lib}
+        }                LOAD = text_sector,
+                         RUN = RAMGS2,
                          LOAD_START(_RamfuncsLoadStart),
                          LOAD_SIZE(_RamfuncsLoadSize),
                          LOAD_END(_RamfuncsLoadEnd),
                          RUN_START(_RamfuncsRunStart),
                          RUN_SIZE(_RamfuncsRunSize),
                          RUN_END(_RamfuncsRunEnd),
-                         PAGE = 0, ALIGN(4)   
+                         PAGE = 0, ALIGN(4)
    #endif
 #endif
+
 						 
    /* Allocate uninitalized data sections: */
    .stack              : > RAMM1        PAGE = 1

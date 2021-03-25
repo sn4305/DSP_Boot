@@ -67,7 +67,7 @@
 WD_DISABLE	.set	1		;set to 1 to disable WD, else set to 0
 
     .global code_start
-    .global _ExitBoot
+
 ;	.ref _main
 	.ref _c_int00
 
@@ -106,7 +106,7 @@ wd_disable:
 ; is located in the ACC register
 ; if invoked _c_int00, the PC will not run to here,
 ; it will blocked in exit() function inside _c_int00 after jump out from main().
-    BF  _ExitBoot,UNC
+;    BF  _ExitBoot,UNC
     .endif
 
 ;end wd_disable
@@ -130,6 +130,10 @@ wd_disable:
 ; 5) LRETR - this will also clear the RPC
 ;    register since 0 was on the stack
 ;-----------------------------------------------
+
+    .if __IS_STANDALONE == 0
+    .global _ExitBoot
+    .sect "exitboot"
 
 _ExitBoot:
 
@@ -212,6 +216,7 @@ _ExitBoot:
 
     LRETR
 
+    .endif
 ;eof ----------
 
 	.end

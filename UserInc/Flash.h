@@ -32,10 +32,6 @@
 
 #define APP_VALID_FLAG                  *(uint32 *)FLAG_APPLI_ADDRESS
 
-/* used flash sector bit field presentation*/
-#define BOOT0_SECTOR                    0x000E      /* Sector B|C|D, 0b1110*/
-#define BOOT1_SECTOR                    0x1C0000    /* Sector O|P|Q, 0b1 1100 0000 0000 0000 0000*/
-#define APP0_SECTOR                     0x03F0      /* Sector E|F|G|H|I|J, 0b0011 1111 0000*/
 
 #define FLASH_SECTOR_NUM                28U
 #define FLASH_WORDS_PER_ROW             128u

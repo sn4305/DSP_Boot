@@ -62,17 +62,29 @@
 
 #define MEM_PREBOOT_START_ADDRESS       0x80000
 
+/* used flash sector bit field presentation*/
+#define BOOT0_SECTOR                    0x000E      /* Sector B|C|D, 0b1110 */
+#define BOOT0_FLAG_SECTOR               0x0008      /* Sector D, 0b1000 */
+#define BOOT1_SECTOR                    0x1C0000    /* Sector O|P|Q, 0b1 1100 0000 0000 0000 0000*/
+#define BOOT1_FLAG_SECTOR               0x100000    /* Sector Q, 0b1 0000 0000 0000 0000 0000 */
+#define APP0_SECTOR                     0x03F0      /* Sector E|F|G|H|I|J, 0b0011 1111 0000*/
+
 #define FLASH_BYTES_PER_WORD            2u
 
-extern void ExitBoot(uint32 EntryAddr);
+
+#define EXIT_FUNC_ADDR                  0x81000     /* Restore Exit_Boot, absolute address*/
+typedef void (*pExitBoot)(uint32_t);
+extern pExitBoot exitboot;
+//extern void ExitBoot(uint32 EntryAddr);
 /* GOTO start address of applicative area*/
-#define StartApplication()              ExitBoot(MEM_APPCODE_START_ADDRESS)
+#define StartApplication()              exitboot(MEM_APPCODE_START_ADDRESS)
 /* GOTO start address of PreBootloader area*/
-#define RESET()                         ExitBoot(MEM_PREBOOT_START_ADDRESS)
+#define RESET()                         exitboot(MEM_PREBOOT_START_ADDRESS)
 /* GOTO start address of Bootloader0 area*/
-#define StartBootEven()                 ExitBoot(MEM_BOOT0_START_ADDRESS)
+#define StartBootEven()                 exitboot(MEM_BOOT0_START_ADDRESS)
 /* GOTO start address of Bootloader1 area*/
-#define StartBootOdd()                  ExitBoot(MEM_BOOT1_START_ADDRESS)
+#define StartBootOdd()                  exitboot(MEM_BOOT1_START_ADDRESS)
+
 
 #define Read_Data_Word(Addr)            *(uint16_t *)(Addr)
 

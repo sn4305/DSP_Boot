@@ -14,6 +14,9 @@ extern uint32_t u32UpdataFlag;
 
 extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
 extern uint16_t SwitchBank(uint16_t BankIdx);
+extern int prv_Sector_Erase(uint32_t sectors);
+
+pExitBoot exitboot = (pExitBoot)EXIT_FUNC_ADDR;
 
 static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
@@ -468,11 +471,13 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
     return ReturnValue;
 }
 
+#pragma CODE_SECTION(CRCWrite,".TI.ramfunc");
 void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 {
     uint16_t WriteBuf[2];
     uint16_t ReceivedCRC;
     uint16_t CRCFlash;
+    uint32_t EraseSector;
 
     u32UpdataFlag = 0;
     ReceivedCRC = ((uint16_t) ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
@@ -506,9 +511,22 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             }
             WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
             WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);
-
             WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
-            st_BootFlag.ucAppMemoryErase = false;
+            ReleaseFlashPump();
+            if(0 == BootStatus.BootPolarity)
+            {
+                EraseSector = BOOT0_FLAG_SECTOR;
+                SwitchBank(0);
+
+            }
+            else
+            {
+                EraseSector = BOOT1_FLAG_SECTOR;
+                SwitchBank(1);
+            }
+            DINT;
+            /*Erase Current boot Flash */
+            prv_Sector_Erase(EraseSector);
         }
         else
         {
@@ -516,10 +534,9 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteBuf[0] = (uint16_t) APP_VALID;
             WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
-            st_BootFlag.ucAppMemoryErase = false;
         }
-        ReleaseFlashPump();
-        DELAY_US(100000L);
+        st_BootFlag.ucAppMemoryErase = false;
+        DELAY_US(200000L);
         RESET();
     }
     else

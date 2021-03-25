@@ -82,6 +82,17 @@ uint32_t main(void)
     InitSysCtrl(); //PLL activates
 
     //
+    //  Unlock CSM
+    //
+    //  If the API functions are going to run in unsecured RAM
+    //  then the CSM must be unlocked in order for the flash
+    //  API functions to access the flash.
+    //  If the flash API functions are executed from secure memory
+    //  then this step is not required.
+    //
+    CsmUnlock();
+
+    //
     // Step 2. Initialize GPIO:
     // This example function is found in the F2837xS_Gpio.c file and
     // illustrates how to set the GPIO to it's default state.
@@ -479,14 +490,17 @@ uint32_t main(void)
         } // switch (MyCurrentState)
 
 #ifdef DEMOBOARD
-        //toggle LED
-        if(0 == Get_SysTick()%40)
+#ifndef __IS_STANDALONE
+        //toggle LED for debug
+        if(0 == Get_SysTick()%40) //system boot, blink faster
+#else
+        if(0 == Get_SysTick()%80) //Stand alone boot, blink slower
+
+
+#endif
             GPIO_WritePin(BLINKY_LED_GPIO, 0);
         else
             GPIO_WritePin(BLINKY_LED_GPIO, 1);
-
-
-
 #endif
 
 
