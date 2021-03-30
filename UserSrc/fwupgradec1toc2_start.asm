@@ -131,7 +131,6 @@ wd_disable:
 ;    register since 0 was on the stack
 ;-----------------------------------------------
 
-    .if __IS_STANDALONE == 0
     .global _ExitBoot
     .sect "exitboot"
 
@@ -216,7 +215,6 @@ _ExitBoot:
 
     LRETR
 
-    .endif
 ;eof ----------
 
 	.end

@@ -138,6 +138,8 @@ SECTIONS
 #ifndef __IS_STANDALONE
    .preboot            : > FLASHA       	PAGE = 0, ALIGN(4)
    exitboot            : > EXIT       		PAGE = 0, ALIGN(4)
+#else
+   exitboot            : > RAMLS4       	PAGE = 0, ALIGN(4), TYPE = DSECT
 #endif
 
 #ifdef __TI_COMPILER_VERSION__

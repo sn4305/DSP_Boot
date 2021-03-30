@@ -72,6 +72,15 @@ void InitCana(void)
     CANGlobalIntEnable(CANA_BASE, CAN_GLB_INT_CANINT0);
 
     //
+    // Clear the global interrupt flag for the CAN interrupt line
+    //
+    CANGlobalIntClear(CANA_BASE, CAN_GLB_INT_CANINT0);
+
+    //
+    // Acknowledge this interrupt located in group 9
+    //
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
+    //
     // Start CAN module A operations
     //
 //    CANEnable(CANA_BASE);

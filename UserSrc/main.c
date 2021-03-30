@@ -494,7 +494,7 @@ uint32_t main(void)
         //toggle LED for debug
         if(0 == Get_SysTick()%40) //system boot, blink faster
 #else
-        if(0 == Get_SysTick()%80) //Stand alone boot, blink slower
+        if(0 == Get_SysTick()%100) //Stand alone boot, blink slower
 
 
 #endif
