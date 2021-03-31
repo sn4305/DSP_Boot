@@ -38,18 +38,28 @@ static void Init_BootFlag(void);
 *********************************************************/
 #ifndef __IS_STANDALONE
 /* function declaration */
-uint32_t MainBoot1(void);
+uint32_t MainBoot(void);
 
 #pragma CODE_SECTION(main,".preboot");
 uint32_t main(void)
 {//Pre boot sequence
    if (boot_even_flag == BootEvenValid)
    {
-#ifndef __IS_DEBUG
-       StartBootEven();
-#else
-       MainBoot1();
-#endif
+       if (u40BootVersion[0] == 0x0101 &&
+           u40BootVersion[1] == 0x0301 &&
+           u40BootVersion[2] == 0x00FF )
+//       if (*(uint16_t *)0x00087FF4 == 0x0101 &&
+//               *(uint16_t *)0x00087FF5 == 0x0301 &&
+//               *(uint16_t *)0x00087FF6 == 0x00FF )
+       {
+           /* if it is init Boot0, then jump to Mainboot*/
+           MainBoot();
+       }
+       else
+       {
+           /* if it is reProgrammed Boot0, then jump to fix Boot0 start address*/
+           StartBootEven();
+       }
    }
    else if(boot_odd_flag == BootOddValid)
    {
@@ -64,11 +74,13 @@ uint32_t main(void)
 }
 #endif
 
+
+
 /**
  * main.c
  */
 #ifndef __IS_STANDALONE
-uint32_t MainBoot1(void)
+uint32_t MainBoot(void)
 #else
 uint32_t main(void)
 #endif

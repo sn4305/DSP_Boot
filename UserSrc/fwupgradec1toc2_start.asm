@@ -67,7 +67,7 @@
 WD_DISABLE	.set	1		;set to 1 to disable WD, else set to 0
 
     .global code_start
-
+    .global disablewd
 ;	.ref _main
 	.ref _c_int00
 
@@ -89,9 +89,11 @@ code_start:
 *
 * Description: Disables the watchdog timer
 ***********************************************************************
+    .sect "disablewd"
+
     .if WD_DISABLE == 1
 
-    .text
+;    .text
 __stack:    .usect ".stack",0
 
 wd_disable:

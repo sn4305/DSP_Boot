@@ -65,8 +65,8 @@
 /* used flash sector bit field presentation*/
 #define BOOT0_SECTOR                    0x000E      /* Sector B|C|D, 0b1110 */
 #define BOOT0_FLAG_SECTOR               0x0008      /* Sector D, 0b1000 */
-#define BOOT1_SECTOR                    0x1C0000    /* Sector O|P|Q, 0b1 1100 0000 0000 0000 0000*/
-#define BOOT1_FLAG_SECTOR               0x100000    /* Sector Q, 0b1 0000 0000 0000 0000 0000 */
+#define BOOT1_SECTOR                    0x1C000    /* Sector O|P|Q, 0b1 1100 0000 0000 0000*/
+#define BOOT1_FLAG_SECTOR               0x10000    /* Sector Q, 0b1  0000 0000 0000 0000 */
 #define APP0_SECTOR                     0x03F0      /* Sector E|F|G|H|I|J, 0b0011 1111 0000*/
 
 #define FLASH_BYTES_PER_WORD            2u

@@ -62,6 +62,7 @@ void Init_Timer(void)
 // Enable TINT0 in the PIE: Group 1 interrupt 7
 //
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 
 #ifndef __IS_DEBUG
     /*enable watchdog*/
