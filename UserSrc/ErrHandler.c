@@ -365,11 +365,11 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt
     DiffErr = 0;
     pVer = (uint16_t *)PN_Addr;
 
-    ActualVersion[0] = (uint8_t)(*pVer >> 8);
-    ActualVersion[1] = (uint8_t)(*pVer++);
-    ActualVersion[2] = (uint8_t)(*pVer >> 8);
-    ActualVersion[3] = (uint8_t)(*pVer++);
-    ActualVersion[4] = (uint8_t)(*pVer >> 8);
+    ActualVersion[0] = (uint8_t)(*pVer >> 8) & 0xFF;
+    ActualVersion[1] = (uint8_t)(*pVer++) & 0xFF;
+    ActualVersion[2] = (uint8_t)(*pVer >> 8) & 0xFF;
+    ActualVersion[3] = (uint8_t)(*pVer++) & 0xFF;
+    ActualVersion[4] = (uint8_t)(*pVer >> 8) & 0xFF;
 
     data++;
     for(i = 0; i < 5; i++)

@@ -48,9 +48,6 @@ uint32_t main(void)
        if (u40BootVersion[0] == 0x0101 &&
            u40BootVersion[1] == 0x0301 &&
            u40BootVersion[2] == 0x00FF )
-//       if (*(uint16_t *)0x00087FF4 == 0x0101 &&
-//               *(uint16_t *)0x00087FF5 == 0x0301 &&
-//               *(uint16_t *)0x00087FF6 == 0x00FF )
        {
            /* if it is init Boot0, then jump to Mainboot*/
            MainBoot();

@@ -37,7 +37,7 @@
 #define BootIsValid                     BootOddValid
 #pragma DATA_SECTION(u40BootVersion,".boot_ver");
 /*bootloader SW version, need update this every time update boot SW, otherwise the CMD_SWVersionCheck will failed*/
-const uint16_t u40BootVersion[3] = {0x0011, 0x2233, 0x44FF};
+const uint16_t u40BootVersion[3] = {0x0101, 0x0301, 0x11FF};
 
 #else
 #define VALID_FLAG_ADDR                 FLAG_BOOT0_ADDRESS
