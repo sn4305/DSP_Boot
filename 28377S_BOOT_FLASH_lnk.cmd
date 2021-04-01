@@ -127,19 +127,32 @@ SECTIONS
 #endif
 
    codestart           : > BEGIN       		PAGE = 0, ALIGN(4)
+
+
+	/* user defined sections */
+#ifndef __IS_STANDALONE
+   .preboot            : > FLASHA       	PAGE = 0, ALIGN(4)
+   disablewd           : > FLASHA       	PAGE = 0, ALIGN(4)
+   exitboot            : > EXIT       		PAGE = 0, ALIGN(4)
+
+   .preboot_code: {  -l rts2800_fpu32.lib(.text) }    > FLASHA     PAGE = 0, ALIGN(4)
+   .preboot_cinit: {  -l rts2800_fpu32.lib(.cinit) }  > FLASHA      PAGE = 0, ALIGN(4)
    .text               : >> text_sector     PAGE = 0, ALIGN(4)
    .cinit              : > init_sector      PAGE = 0, ALIGN(4)
    .pinit              : > init_sector      PAGE = 0, ALIGN(4)
       /* Initalized sections go in Flash */
    .econst             : > init_sector      PAGE = 0, ALIGN(4)
    .switch             : > init_sector      PAGE = 0, ALIGN(4)
-
-	/* user defined sections */
-#ifndef __IS_STANDALONE
-   .preboot            : > FLASHA       	PAGE = 0, ALIGN(4)
-   exitboot            : > EXIT       		PAGE = 0, ALIGN(4)
 #else
    exitboot            : > RAMLS4       	PAGE = 0, ALIGN(4), TYPE = DSECT
+   disablewd           : > text_sector      PAGE = 0, ALIGN(4)
+
+   .text               : >> text_sector     PAGE = 0, ALIGN(4)
+   .cinit              : > init_sector      PAGE = 0, ALIGN(4)
+   .pinit              : > init_sector      PAGE = 0, ALIGN(4)
+      /* Initalized sections go in Flash */
+   .econst             : > init_sector      PAGE = 0, ALIGN(4)
+   .switch             : > init_sector      PAGE = 0, ALIGN(4)
 #endif
 
 #ifdef __TI_COMPILER_VERSION__
