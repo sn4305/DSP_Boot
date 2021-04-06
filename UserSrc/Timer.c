@@ -64,7 +64,7 @@ void Init_Timer(void)
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 
-#ifndef __IS_DEBUG
+#ifdef __IS_DEBUG
     /*enable watchdog*/
     EnableDog();
 #endif
@@ -133,9 +133,9 @@ void TMR2_SoftwareCounterClear(void)
 static inline void EnableDog(void)
 {
 //
-// Enable the watchdog, 000 WDCLK = INTOSC1/512/1, 1tick period: 51.2us, overtime:51.2us*256 = 13ms
+// Enable the watchdog, 010 WDCLK = INTOSC1/512/2, overtime:2 * 51.2us * 256 = 26ms
 //
     EALLOW;
-    WdRegs.WDCR.all = 0x0028;
+    WdRegs.WDCR.all = 0x002A;
     EDIS;
 }

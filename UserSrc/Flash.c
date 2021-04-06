@@ -241,7 +241,7 @@ int prv_Sector_Erase(uint32_t sectors)
 
     uint16_t i = 0;
     Fapi_StatusType oReturnCheck;
-    Fapi_FlashStatusType FlashStatus;
+//    Fapi_FlashStatusType FlashStatus;
     uint16_t fail = 0;
 
     EALLOW;
@@ -249,6 +249,7 @@ int prv_Sector_Erase(uint32_t sectors)
     {
         if( (sectors & 0x00000001) == 0x00000001 )
         {
+            ServiceDog();
             oReturnCheck = Fapi_issueAsyncCommandWithAddress(Fapi_EraseSector,
                     (uint32 *)(sectAddress[i]));
 
@@ -264,7 +265,7 @@ int prv_Sector_Erase(uint32_t sectors)
             while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy)
             {
             }
-            FlashStatus = Fapi_getFsmStatus();
+//            FlashStatus = Fapi_getFsmStatus();
         }
         sectors = sectors >> 1;
     }
@@ -359,6 +360,7 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
             if(!((miniBuffer[0] == 0xFFFF) && (miniBuffer[1] == 0xFFFF) && (miniBuffer[2] == 0xFFFF)
                     && (miniBuffer[3] == 0xFFFF)))
             {
+                ServiceDog();
                 //program 4 words at once, 64-bits
                 oReturnCheck = Fapi_issueProgrammingCommand((uint32 *)(Address + k * 4),
                                                             miniBuffer,

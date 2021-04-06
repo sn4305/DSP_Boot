@@ -185,15 +185,14 @@ uint32_t main(void)
                     TMR1_Stop();
                     TMR1_SoftwareCounterClear();
 #endif
+                    DisableDog();
                     DELAY_US(200000L);
                     StartApplication();
                 }
                 else if(UPDATE_APP_RQST == u32UpdataFlag)
                 {/* received boot request from APP, jump to boot*/
-#ifndef __IS_DEBUG
                     TMR1_Start();
                     TMR1_SoftwareCounterClear();
-#endif
                     SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
                     State = State_BOOT; // <====== GO BOOT
                 }
@@ -223,6 +222,7 @@ uint32_t main(void)
                         else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
                         {
                             u32UpdataFlag = 0;
+                            DisableDog();
                             DELAY_US(200000L);
                             RESET();
                         }
@@ -235,7 +235,6 @@ uint32_t main(void)
     //  ||                 STATE: BOOT                            ||
     //  ||========================================================||
             case State_BOOT:
-#ifndef __IS_DEBUG
                 if (TMR1_SoftwareCounterGet() >= 500)
                 { /*500 * 10ms = 5000ms */
                     /*5s Timeout*/
@@ -243,11 +242,11 @@ uint32_t main(void)
                     Init_BootFlag();
                     DINT;
                     TMR1_SoftwareCounterClear();
+                    DisableDog();
                     DELAY_US(200000L);
                     RESET();
                 }
                 ServiceDog();
-#endif
 
                 /*Wait for message*/
                 if(CAN_RX_Flag)
@@ -278,6 +277,7 @@ uint32_t main(void)
                                     u32UpdataFlag = 0;
                                     Init_BootFlag();
                                     DINT;
+                                    DisableDog();
                                     DELAY_US(200000L);
                                     RESET();
                                 }
@@ -358,7 +358,7 @@ uint32_t main(void)
                             break;
 
                         case CMD_TransferInformation:
-#ifndef __IS_DEBUG
+#ifdef __IS_DEBUG
                             /* Start timer for timeout*/
                             TMR2_Start();
                             /* Initialize counter*/

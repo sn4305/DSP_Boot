@@ -183,15 +183,15 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
-#ifndef __IS_DEBUG
+
     if(TMR2_SoftwareCounterGet() >= 5)
     {
-        /*50msTimeout*/
+        /*50ms Timeout*/
         error = TIMEOUT;
         TMR2_SoftwareCounterClear();
         return error;
     }
-#endif
+
     if(!(st_TransDataInfo->ValidInfo))
     {
         error = WRONG_REQUEST_FORMAT;
@@ -495,9 +495,9 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 
     if(CRCFlash == ReceivedCRC)
     {
+        ServiceDog();
         /*Send OK response */
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
-        ServiceDog();
 
         if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
         {
@@ -513,6 +513,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);
             WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
             ReleaseFlashPump();
+            ServiceDog();
             if(0 == BootStatus.BootPolarity)
             {
                 EraseSector = BOOT0_FLAG_SECTOR;
@@ -534,8 +535,10 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteBuf[0] = (uint16_t) APP_VALID;
             WriteBuf[1] = (uint16_t) (APP_VALID >> 16);
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
+            ServiceDog();
         }
         st_BootFlag.ucAppMemoryErase = false;
+        DisableDog();
         DELAY_US(200000L);
         RESET();
     }

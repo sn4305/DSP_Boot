@@ -142,10 +142,10 @@ uint16_t CalcCRC_FLASH(uint16_t Init, uint32_t CodeStartAddr, uint32_t len_word)
     uint16_t  CRC = Init;
     uint16_t *pAddr = (uint16_t *)CodeStartAddr;
 
-    ServiceDog();
     /* while remain data */
     while(len_word > 0)
     {
+        ServiceDog();
         CRC = _crc16(CRC, Read_Data_Word(pAddr++));
         len_word--;
     }
