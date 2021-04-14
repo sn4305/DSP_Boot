@@ -22,93 +22,56 @@ extern __interrupt void canaISR(void);
 
 void InitCana(void)
 {
+    /* Initialize the CAN TX|RX IO */
     InitCanaGpio();
-
-    //
-    // Initialize the CAN controller
-    //
+    /* Initialize the CAN controller */
     CANInit(CANA_BASE);
-
-    //
-    // Setup CAN to be clocked off the PLL output clock
-    //
-    CANClkSourceSelect(CANA_BASE, 0);   // 500kHz CAN-Clock
-
-    //
+    /* Setup CAN to be clocked off the PLL output clock */
+    CANClkSourceSelect(CANA_BASE, 0);
+    /********************************************************************
     // Set up the CAN bus bit rate to 500kHz for CANA module
     // This function sets up the CAN bus timing for a nominal configuration.
     // You can achieve more control over the CAN bus timing by using the
     // function CANBitTimingSet() instead of this one, if needed.
     // Additionally, consult the device data sheet for more information about
     // the CAN module clocking.
-    //
+    *********************************************************************/
     CANBitRateSet(CANA_BASE, 200000000, 500000);
-
-    //
-    // Enable interrupts on the CAN A peripheral.
-    //
+    /* Enable interrupts on the CAN A peripheral. */
     CANIntEnable(CANA_BASE, CAN_INT_MASTER | CAN_INT_ERROR | CAN_INT_STATUS);
 
-    //
+    /********************************************************************
     // Interrupts that are used in this example are re-mapped to
     // ISR functions found within this file.
     // This registers the interrupt handler in PIE vector table.
-    //
+    ********************************************************************/
     EALLOW;
     PieVectTable.CANA0_INT = canaISR;
     EDIS;
-
-    //
-    // Enable the CAN-A0 interrupt on the processor (PIE).
-    //
+    /* Enable the CAN-A0 interrupt on the processor (PIE). */
     PieCtrlRegs.PIEIER9.bit.INTx5 = 1;
     IER |= M_INT9;
-
+    /* Initialize the CAN-A0 message box. */
     InitCanaMbox();
-
-    //
-    // Enable the CAN-A interrupt signal
-    //
+    /* Enable the CAN-A interrupt signal  */
     CANGlobalIntEnable(CANA_BASE, CAN_GLB_INT_CANINT0);
-
-    //
-    // Clear the global interrupt flag for the CAN interrupt line
-    //
+    /* Clear the global interrupt flag for the CAN interrupt line */
     CANGlobalIntClear(CANA_BASE, CAN_GLB_INT_CANINT0);
-
-    //
-    // Acknowledge this interrupt located in group 9
-    //
+    /* Acknowledge this interrupt located in group 9 */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
-    //
-    // Start CAN module A operations
-    //
-//    CANEnable(CANA_BASE);
 }
 
 void InitCanaGpio(void)
 {
-#ifdef DEMOBOARD
-    GPIO_SetupPinMux(70, GPIO_MUX_CPU1, 5); //GPIO70 -  CANRXA
+    GPIO_SetupPinMux(70, GPIO_MUX_CPU1, 5); /*GPIO70 -  CANRXA*/
     GPIO_SetupPinOptions(70, GPIO_INPUT, GPIO_ASYNC);
-    GPIO_SetupPinMux(71, GPIO_MUX_CPU1, 5); //GPIO71 - CANTXA
+    GPIO_SetupPinMux(71, GPIO_MUX_CPU1, 5); /*GPIO71 - CANTXA*/
     GPIO_SetupPinOptions(71, GPIO_OUTPUT, GPIO_PUSHPULL);
-#else
-
-#endif
 }
 
 void InitCanaMbox(void)
 {
-    //
-    // Initialize the receive message object used for receiving CAN messages.
-    // Message Object Parameters:
-    //      Message Identifier: 0x5555
-    //      Message ID Mask: 0x0
-    //      Message Object Flags: Receive Interrupt
-    //      Message Data Length: 4 Bytes
-    //      Message Receive data: rxMsgData
-    //
+    /* Initialize the receive message object used for receiving CAN messages.*/
     sRXCANMessage.ui32MsgID = ModeRequest;
     sRXCANMessage.ui32MsgIDMask = 0;
     sRXCANMessage.ui32Flags = MSG_OBJ_RX_INT_ENABLE;
@@ -153,6 +116,22 @@ void InitCanaMbox(void)
     sTXCANMessage.pucMsgData = txMsgData;
 }
 
+/*************************************************
+*  Function:       SendDiagnosticResponse
+*  Description:    Send Diagnostic Response from CANa
+*  Calls:          Main() state machine
+*  Input:
+        @param[in] MemoryArea:
+            0x20: OBC Application,
+            0x21: OBC HW Version,
+            0x22: HW_SERIAL_NUMBER,
+            0x24: OBC Bootloader;
+        @param[in] Config: MODE code;
+*  Output:           None
+*  Quoted Variable:  None
+*  Modified Variable: txMsgData
+*  Return:           None
+*************************************************/
 void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config)
 {
     sTXCANMessage.ui32MsgID = DIAG_SESSION;
@@ -183,7 +162,7 @@ void SendLogisticResponse(uint8_t MemoryArea, uint8_t* Config, uint8_t DataSize)
 
     /* clear data buffer*/
     txMsgData[0] = MemoryArea;
-    for (i = 0; i < 7; i++)
+    for(i = 0; i < 7; i++)
     {
         if(i < DataSize)
         {

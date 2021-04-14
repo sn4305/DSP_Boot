@@ -9,24 +9,23 @@ Copyright 2011 - Eaton, All Rights Reserved.
 
 Author              Date               Ver#        Description (CR#)
 Dongdong Yang       20210225           00          Init for Base project 2nd DSP(28377s) Bootloader
- append log after baseline, especially for milestone or release version, no log is allowed for minor modification
+Dongdong Yang       20210413           01          Optimize code according to coding guideline V1.1
 ******************************************************************
 (***).
 */
 
 #include "main.h"
 
-BootMachineStates State = State_TRANSITION;
-static MyBootSys BootStatus;
-uint16_t s_u16Configuration = 0; //OBC address configuration
-St_BootFlag st_BootFlag = {false, false, false, false};
-pSt_BootFlag ptr_st_BootFlag = &st_BootFlag;
+static BootMachineStates s_stState = State_TRANSITION;
+static MyBootSys s_stBootStatus;
+uint16_t s_u16AddrCfg = 0; //OBC address configuration
+St_BootFlag s_stBootFlag = {false, false, false, false};
 uint8_t RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
 St_TransData st_TransData = {0, RecvBuf, 0};
 St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
 
 /* function declaration */
-static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
+static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
 static void IdentifyBoot(MyBootSys* Info);
 static void Init_TransParam(St_TransDataInfo *pTran);
 static void Init_BootFlag(void);
@@ -43,11 +42,11 @@ uint32_t MainBoot(void);
 #pragma CODE_SECTION(main,".preboot");
 uint32_t main(void)
 {//Pre boot sequence
-   if (boot_even_flag == BootEvenValid)
+   if(boot_even_flag == BootEvenValid)
    {
-       if (u40BootVersion[0] == 0x0101 &&
-           u40BootVersion[1] == 0x0301 &&
-           u40BootVersion[2] == 0x00FF )
+       if(0x0101 == u40BootVersion[0]
+          && 0x0301 == u40BootVersion[1]
+          && 0x00FF == u40BootVersion[2])
        {
            /* if it is init Boot0, then jump to Mainboot*/
            MainBoot();
@@ -82,30 +81,29 @@ uint32_t MainBoot(void)
 uint32_t main(void)
 #endif
 {
-//    uint32 FlagAppli;
-    //
-    // Step 1. Initialize System Control:
-    // Enable Peripheral Clocks
-    // This function is found in the F2837xS_SysCtrl.c file.
-    //
+    /****************************************************
+    * Step 1. Initialize System Control:
+    * Enable Peripheral Clocks
+    * This function is found in the F2837xS_SysCtrl.c file.
+    ******************************************************/
     InitSysCtrl(); //PLL activates
 
-    //
-    //  Unlock CSM
-    //
-    //  If the API functions are going to run in unsecured RAM
-    //  then the CSM must be unlocked in order for the flash
-    //  API functions to access the flash.
-    //  If the flash API functions are executed from secure memory
-    //  then this step is not required.
-    //
+    /***************************************************
+    *  Unlock CSM
+    *
+    *  If the API functions are going to run in unsecured RAM
+    *  then the CSM must be unlocked in order for the flash
+    *  API functions to access the flash.
+    *  If the flash API functions are executed from secure memory
+    *  then this step is not required.
+    **************************************************/
     CsmUnlock();
 
-    //
-    // Step 2. Initialize GPIO:
-    // This example function is found in the F2837xS_Gpio.c file and
-    // illustrates how to set the GPIO to it's default state.
-    //
+    /***************************************************
+    * Step 2. Initialize GPIO:
+    * This example function is found in the F2837xS_Gpio.c file and
+    * illustrates how to set the GPIO to it's default state.
+    ***************************************************/
     InitGpio();
 
 #ifdef DEMOBOARD
@@ -115,76 +113,67 @@ uint32_t main(void)
     GPIO_SetupPinMux(CAN_LED_GPIO, GPIO_MUX_CPU1, 0);
     GPIO_SetupPinOptions(CAN_LED_GPIO, GPIO_OUTPUT, GPIO_PUSHPULL);
 #endif
-    //
-    // Step 3. Clear all interrupts and initialize PIE vector table:
-    // Disable CPU interrupts
-    //
+    /***************************************************
+    * Step 3. Clear all interrupts and initialize PIE vector table:
+    * Disable CPU interrupts
+    ***************************************************/
     DINT;
 
-    //
-    // Initialize the PIE control registers to their default state.
-    // The default state is all PIE interrupts disabled and flags
-    // are cleared.
-    // This function is found in the F2837xS_PieCtrl.c file.
-    //
+    /***************************************************
+    * Initialize the PIE control registers to their default state.
+    * The default state is all PIE interrupts disabled and flags
+    * are cleared.
+    * This function is found in the F2837xS_PieCtrl.c file.
+    ***************************************************/
     InitPieCtrl();
 
-    //
-    // Disable CPU interrupts and clear all CPU interrupt flags:
-    //
+    /***************************************************
+    * Disable CPU interrupts and clear all CPU interrupt flags:
+    ***************************************************/
     IER = 0x0000;
     IFR = 0x0000;
 
-    //
-    // Initialize the PIE vector table with pointers to the shell Interrupt
-    // Service Routines (ISR).
-    // This will populate the entire table, even if the interrupt
-    // is not used in this example.  This is useful for debug purposes.
-    //
+    /***************************************************
+    * Initialize the PIE vector table with pointers to the shell Interrupt
+    * Service Routines (ISR).
+    ***************************************************/
     InitPieVectTable();
 
-    //
-    // Initialize the CANA.
-    //
+    /* Initialize the CANA. */
     InitCana();
+
+    /* Initialize the Timer. */
     Init_Timer();
 
-    //
-    // Initialize the Flash.
-    //
+    /* Initialize the Flash/FMC. */
     Init_Flash_Sectors();
 
+    /* Enable CPU interrupts */
     EINT;
-//    ERTM;  // Enable Global realtime interrupt DBGM
 
-    //
-    // Start CAN module A operations
-    //
+    /* Start CAN module A operations  */
     CANEnable(CANA_BASE);
 
     ServiceDog();
 
-    State = State_TRANSITION;
+    s_stState = State_TRANSITION;
     Init_BootFlag();
     Init_TransParam(&st_TransDataInfo);
-    IdentifyBoot(&BootStatus);
+    IdentifyBoot(&s_stBootStatus);
 
-    //  ||========================================================||
-    //  ||                 Start of State Machine                 ||
-    //  ||========================================================||
-    while (1) {
-        switch (State) {
-
-    //  ||========================================================||
-    //  ||                 STATE: TRANSITION                      ||
-    //  ||========================================================||
+    /*  ||========================================================||
+    *   ||                 Start of s_stBootStatus Machine                 ||
+    *   ||========================================================||  */
+    while (1)
+    {
+        switch (s_stState)
+        {
+    /*  ||========================================================||
+    *   ||                 STATE: TRANSITION                      ||
+    *   ||========================================================||  */
             case State_TRANSITION:
                 if( UPDATE_APP_RQST != u32UpdataFlag && APP_VALID ==  APP_VALID_FLAG)
                 {/* FlagAppli is valid, jump to APP*/
-#ifndef __IS_DEBUG
-                    TMR1_Stop();
-                    TMR1_SoftwareCounterClear();
-#endif
                     DisableDog();
                     DELAY_US(200000L);
                     StartApplication();
@@ -193,33 +182,33 @@ uint32_t main(void)
                 {/* received boot request from APP, jump to boot*/
                     TMR1_Start();
                     TMR1_SoftwareCounterClear();
-                    SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
-                    State = State_BOOT; // <====== GO BOOT
+                    SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
+                    s_stState = State_BOOT; /* <====== GO BOOT   */
                 }
                 else
                 {
-
-                    SendDiagnosticResponse(DEFAULT_MODE, s_u16Configuration);
-                    State = State_DEFAULT; // <====== GO DEFAULT
+                    SendDiagnosticResponse(DEFAULT_MODE, s_u16AddrCfg);
+                    s_stState = State_DEFAULT; /* <====== GO DEFAULT  */
                 }
                 break;
-    //  ||========================================================||
-    //  ||                 STATE: DEFAULT                         ||
-    //  ||========================================================||
+
+    /*  ||========================================================||
+    *   ||                 STATE: DEFAULT                         ||
+    *   ||========================================================||  */
             case State_DEFAULT:
                 ServiceDog();
                 if(CAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
-                    if(g_enumCAN_Command == CMD_ModeRequest )
+                    if(CMD_ModeRequest == g_enumCAN_Command)
                     {
-                        if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
+                        if(BOOT_MODE == (g_u8rxMsgData[4] & 0x07))
                         {
                             u32UpdataFlag = UPDATE_APP_RQST;
-                            SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
-                            State = State_BOOT; // <====== GO BOOT
+                            SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
+                            s_stState = State_BOOT; /* <====== GO BOOT  */
                         }
-                        else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                        else if(DEFAULT_MODE == (g_u8rxMsgData[4] & 0x07))
                         {
                             u32UpdataFlag = 0;
                             DisableDog();
@@ -228,24 +217,23 @@ uint32_t main(void)
                         }
                     }
                 }
-
-                //ClrWdt();
                 break;
-    //  ||========================================================||
-    //  ||                 STATE: BOOT                            ||
-    //  ||========================================================||
+
+    /*  ||========================================================||
+    *   ||                 STATE: BOOT                            ||
+    *   ||========================================================||  */
             case State_BOOT:
                 if (TMR1_SoftwareCounterGet() >= 500)
-                { /*500 * 10ms = 5000ms */
+                {   /*500 * 10ms = 5000ms */
                     /*5s Timeout*/
                     u32UpdataFlag = 0;
                     Init_BootFlag();
-                    DINT;
                     TMR1_SoftwareCounterClear();
                     DisableDog();
                     DELAY_US(200000L);
                     RESET();
                 }
+
                 ServiceDog();
 
                 /*Wait for message*/
@@ -259,24 +247,23 @@ uint32_t main(void)
                         case CMD_ModeRequest:
                             /* Mode Request*/
                             error = IsRequestValid(g_RXCANMsg);
-                            if (error)
+                            if(error)
                             {
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
                             else
                             {
-                                if((g_u8rxMsgData[4] & 0x07) == BOOT_MODE)
+                                if(BOOT_MODE == (g_u8rxMsgData[4] & 0x07))
                                 {/* Enter boot mode request : Send positive Response
                                  * No Action*/
                                     Init_TransParam(&st_TransDataInfo);
-                                    SendDiagnosticResponse(BOOT_MODE, s_u16Configuration);
+                                    SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                                 }
-                                else if((g_u8rxMsgData[4] & 0x07) == DEFAULT_MODE)
+                                else if(DEFAULT_MODE == (g_u8rxMsgData[4] & 0x07))
                                 {
-                                    /* Reset*/
+                                    /* Reset to preboot*/
                                     u32UpdataFlag = 0;
                                     Init_BootFlag();
-                                    DINT;
                                     DisableDog();
                                     DELAY_US(200000L);
                                     RESET();
@@ -311,23 +298,23 @@ uint32_t main(void)
                             }
                             else
                             {
-                                SWVersionComparetHandle(g_RXCANMsg, BootStatus, ptr_st_BootFlag);
+                                SWVersionComparetHandle(g_RXCANMsg, &s_stBootStatus, &s_stBootFlag);
                             }
                             break;
 
                         case CMD_SecurityAccess:
                             error = IsSecurityValid(g_RXCANMsg);
-                            if ((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA || g_u8rxMsgData[0] == (MEMORY_AREA | 4))
+                            if (MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0) || (MEMORY_AREA | 4) == g_u8rxMsgData[0])
                             {
                                 if(!error)
                                 {
-                                    /* Security successfully unlocked*/
-                                    st_BootFlag.ucSecurityUnlocked = true;
+                                    /* Security unlocked successfully */
+                                    s_stBootFlag.ucSecurityUnlocked = true;
                                 }
                                 else
                                 {
-                                    /* Security successfully unlocked*/
-                                    st_BootFlag.ucSecurityUnlocked = false;
+                                    /* Security unlocked fail         */
+                                    s_stBootFlag.ucSecurityUnlocked = false;
                                 }
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
@@ -338,7 +325,7 @@ uint32_t main(void)
                             break;
 
                         case CMD_EraseMemory:
-                            error = IsEraseValid(g_RXCANMsg, st_BootFlag.ucSecurityUnlocked);
+                            error = IsEraseValid(g_RXCANMsg, s_stBootFlag.ucSecurityUnlocked);
                             if(error)
                             {
                                 /* Error case : send NOK*/
@@ -346,9 +333,9 @@ uint32_t main(void)
                             }
                             else
                             {
-                                if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
+                                if(MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
                                 {
-                                    EraseFlash(g_u8rxMsgData[0], BootStatus, ptr_st_BootFlag);
+                                    EraseFlash(g_u8rxMsgData[0], s_stBootStatus, &s_stBootFlag);
                                 }
                                 else
                                 {
@@ -358,13 +345,11 @@ uint32_t main(void)
                             break;
 
                         case CMD_TransferInformation:
-#ifdef __IS_DEBUG
                             /* Start timer for timeout*/
                             TMR2_Start();
                             /* Initialize counter*/
                             TMR2_SoftwareCounterClear();
-#endif
-                            error = IsTransferInfoValid(g_RXCANMsg, &st_TransDataInfo);
+                            error = IsTransferInfoValid(g_RXCANMsg, &st_TransDataInfo, &s_stBootFlag);
                             if (error)
                             {
                                 /* Send error message*/
@@ -405,7 +390,7 @@ uint32_t main(void)
                                 error = IsTransferDataValid(g_RXCANMsg, &st_TransDataInfo);
                                 if (error)
                                 {
-                                    if (error == SAME_SN)
+                                    if (SAME_SN == error)
                                     {
                                         /* Same sequence number as previous frame: ignore the frame*/
                                         TMR2_SoftwareCounterClear();
@@ -417,7 +402,7 @@ uint32_t main(void)
                                         SendGenericResponse(MEMORY_AREA, error);
                                     }
                                 }
-                                else if(MEMORY_AREA == st_TransDataInfo.MemArea || (st_TransDataInfo.MemArea & 0x0F) == 4)
+                                else if(MEMORY_AREA == st_TransDataInfo.MemArea || 4 == (st_TransDataInfo.MemArea & 0x0F))
                                 {
                                     /* Reset timeout counter*/
                                     TMR2_SoftwareCounterClear();
@@ -428,12 +413,12 @@ uint32_t main(void)
                                 else
                                 {
                                     /*Logistic information*/
-                                    if ((st_TransDataInfo.MemArea & 0x0F) == 1 && g_RXCANMsg.ui32MsgLen != HW_VERSION_SIZE + 1)
+                                    if (1 == (st_TransDataInfo.MemArea & 0x0F) && g_RXCANMsg.ui32MsgLen != HW_VERSION_SIZE + 1)
                                     {
                                         /* Transfer Data for HW version is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
                                     }
-                                    else if((st_TransDataInfo.MemArea & 0x0F) == 2 && g_RXCANMsg.ui32MsgLen != HW_SERIAL_NUMBER_SIZE + 1)
+                                    else if(2 == (st_TransDataInfo.MemArea & 0x0F) && g_RXCANMsg.ui32MsgLen != HW_SERIAL_NUMBER_SIZE + 1)
                                     {
                                         /* Transfer Data for HW Serial Number is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
@@ -462,14 +447,14 @@ uint32_t main(void)
                             }
                             else
                             {
-                                if((g_u8rxMsgData[0] & 0xF0) == MEMORY_AREA)
+                                if(MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
                                 {
-                                    if(((g_u8rxMsgData[0] & 0x0F) == 0 || (g_u8rxMsgData[0] & 0x0F) == 4) )//&& ucAppMemoryErase)
+                                    if(0 == (g_u8rxMsgData[0] & 0x0F) || 4 == (g_u8rxMsgData[0] & 0x0F))
                                     {
-                                        if(st_BootFlag.FlashAuthorization) // FlashAuthorization
+                                        if(s_stBootFlag.FlashAuthorization) // FlashAuthorization
                                         {
                                             ServiceDog();
-                                            CRCWrite(g_RXCANMsg, BootStatus);
+                                            CRCWrite(g_RXCANMsg, &s_stBootStatus, &s_stBootFlag);
                                         }
                                     }
                                     else
@@ -494,7 +479,7 @@ uint32_t main(void)
                 break;
 
             default:
-                State = State_TRANSITION;
+                s_stState = State_TRANSITION;
                 break;
         } // switch (MyCurrentState)
 
@@ -521,7 +506,7 @@ uint32_t main(void)
 
 }
 
-static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
+static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     int i, j;
     uint16_t DataToFlash[FLASH_WORDS_PER_ROW];
@@ -542,7 +527,7 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
     }
     if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx == pSt_TransDataInfo->Size + CRC_LENGTH)
     {
-        if (st_BootFlag.FlashAuthorization == true)
+        if (s_stBootFlag.FlashAuthorization == true)
         {
             /* All data received form consecutive frames
              * Extract CRC from last Frame */
@@ -554,17 +539,17 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
             if(CRCCalc == CRC)
             {
                 /*Write data to FLASH*/
-                bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->Address, pSt_TransDataInfo->MemArea, BootStatus);
+                bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->Address, pSt_TransDataInfo->MemArea, &s_stBootStatus);
                 ServiceDog();
                 if(CorrectArea)
                 {
                     /*Fill DataToCopy with 0xFF*/
-                    for (i = pSt_TransDataInfo->Size; i < MAX_BLOCK_SIZE; i++)
+                    for(i = pSt_TransDataInfo->Size; i < MAX_BLOCK_SIZE; i++)
                     {
                         *(pSt_TransDataInfo->ptr_St_Data->pRecvData + i) = 0xFF;
                     }
                     /*Convert structure for FLASH Routines*/
-                    for (i = 0, j = 0; i < FLASH_WORDS_PER_ROW; i++)
+                    for(i = 0, j = 0; i < FLASH_WORDS_PER_ROW; i++)
                     {
                         DataToFlash[i] = ((uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j) << 8) + (uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j + 1);
                         j += 2;
@@ -577,13 +562,13 @@ static void TreatData(uint8_t* Received_Message, St_TransDataInfo *pSt_TransData
                         {
                             /* Problem in app Memory Area
                              * Reset indicators */
-                            st_BootFlag.ucAppMemoryErase = false;
+                            s_stBootFlag.ucAppMemoryErase = false;
                             pSt_TransDataInfo->ValidInfo = false;
                         }
                         else
                         {
                             /*Problem in Logistic memory Area*/
-                            st_BootFlag.ucLogMemoryErase = false;
+                            s_stBootFlag.ucLogMemoryErase = false;
                         }
                         /* Send error*/
                         SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
@@ -649,12 +634,29 @@ static void Init_TransParam(St_TransDataInfo *pTran)
     pTran->ValidInfo    = false;
 }
 
+#if 0
+static uint8_t ReadConfigurationPin(void)
+{
+
+    bool AddressL = GPIO_ReadPin();
+    bool AddressH = GPIO_ReadPin();
+    uint8_t Address = (AddressH << 1) | AddressL;
+
+    uint8_t Address = 0;
+
+    return Address;
+}
+#endif
+
 static void Init_BootFlag(void)
 {
-    ptr_st_BootFlag->ucSecurityUnlocked      = false;
-    ptr_st_BootFlag->FlashAuthorization      = false;
-    ptr_st_BootFlag->ucAppMemoryErase        = false;
-    ptr_st_BootFlag->ucLogMemoryErase        = false;
+    s_stBootFlag.ucSecurityUnlocked      = false;
+    s_stBootFlag.FlashAuthorization      = false;
+    s_stBootFlag.ucAppMemoryErase        = false;
+    s_stBootFlag.ucLogMemoryErase        = false;
+#if 0
+    s_u16AddrCfg = ReadConfigurationPin();
+#endif
 }
 
 //

@@ -15,7 +15,7 @@
 #include "inc/hw_can.h"
 #include "driverlib/can.h"
 
-#define DEMOBOARD
+//#define DEMOBOARD
 
 #define GENERAL_RESP      0xCEF01A0
 #define LOGI_RESP         0xCEF02A0

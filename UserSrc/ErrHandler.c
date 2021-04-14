@@ -8,7 +8,6 @@
 #include "ErrHandler.h"
 #include "CRC.h"
 
-extern St_BootFlag st_BootFlag;
 extern const uint16_t u40BootVersion[3];
 extern uint32_t u32UpdataFlag;
 
@@ -18,7 +17,7 @@ extern int prv_Sector_Erase(uint32_t sectors);
 
 pExitBoot exitboot = (pExitBoot)EXIT_FUNC_ADDR;
 
-static void GetInformation(uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
+static void GetInformation(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     /* Start of data write : reception of address and length */
     pSt_TransDataInfo->Address = ((uint32_t) Received_Message[2] << 16) +
@@ -129,7 +128,7 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     return error;
 }
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo)
+uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag)
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pucMsgData);
@@ -139,7 +138,7 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(st_BootFlag.ucSecurityUnlocked != true)
+    else if(stBootFlag->ucSecurityUnlocked != true)
     {
         error = SECURITY_LOCKED;
     }
@@ -150,11 +149,11 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (st_BootFlag.ucAppMemoryErase  != true) )
+    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (stBootFlag->ucAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
     }
-    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && st_BootFlag.ucLogMemoryErase != true)
+    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && stBootFlag->ucLogMemoryErase != true)
     {
         error = MEMORY_NOT_BLANK;
     }
@@ -343,7 +342,7 @@ void LogiticRequestHandle(uint8_t Identifier)
     }
 }
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag)
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag)
 {
     uint16_t *pVer;
     uint32_t PN_Addr;
@@ -353,7 +352,7 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt
 
     if((*data & 0x0F) == 4)
     {
-        PN_Addr = Info.BootPNAddr;
+        PN_Addr = Info->BootPNAddr;
         RespMemArea = (MEMORY_AREA|0x04);
     }
     else
@@ -390,7 +389,7 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt
     SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }
 
-bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
+bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
 {
     bool ReturnValue = false;
 
@@ -418,14 +417,14 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
     }
     else if ((MemoryArea & 0x0F) == 4)
     {
-        if (Address < Info.OppositBootStartAddr || Address > Info.OppositBootEndAddr)
+        if (Address < Info->OppositBootStartAddr || Address > Info->OppositBootEndAddr)
         {
             ReturnValue = false;
             SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
         }
         else
         {
-            if( 0 == Info.BootPolarity)
+            if( 0 == Info->BootPolarity)
             {
                 /*current boot is EVEN in bank0, need switch bank to 1 to write data*/
                 if(0 != SwitchBank(1))
@@ -437,7 +436,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
                     ReturnValue = true;
                 }
             }
-            else if( 1 == Info.BootPolarity)
+            else if( 1 == Info->BootPolarity)
             {
                 /*current boot is ODD in bank1, need switch bank to 0 to write data*/
                 if(0 != SwitchBank(0))
@@ -472,7 +471,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info)
 }
 
 #pragma CODE_SECTION(CRCWrite,".TI.ramfunc");
-void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
+void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag)
 {
     uint16_t WriteBuf[2];
     uint16_t ReceivedCRC;
@@ -485,7 +484,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
     if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
     {
         /*Calculate CRC for boot memory area*/
-        CRCFlash = CalcCRC_FLASH(0, BootStatus.OppositBootStartAddr, BOOT_TOTAL_LEN);
+        CRCFlash = CalcCRC_FLASH(0, BootStatus->OppositBootStartAddr, BOOT_TOTAL_LEN);
     }
     else
     {
@@ -501,7 +500,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
 
         if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
         {
-            if(0 == BootStatus.BootPolarity)
+            if(0 == BootStatus->BootPolarity)
             {
                 SwitchBank(1);
             }
@@ -509,12 +508,12 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             {
                 SwitchBank(0);
             }
-            WriteBuf[0] = (uint16_t) BootStatus.OppositBootValidCode;
-            WriteBuf[1] = (uint16_t) (BootStatus.OppositBootValidCode >> 16);
-            WriteFlash(BootStatus.OppositBootFlagValidAddr, WriteBuf, 2);
+            WriteBuf[0] = (uint16_t) BootStatus->OppositBootValidCode;
+            WriteBuf[1] = (uint16_t) (BootStatus->OppositBootValidCode >> 16);
+            WriteFlash(BootStatus->OppositBootFlagValidAddr, WriteBuf, 2);
             ReleaseFlashPump();
             ServiceDog();
-            if(0 == BootStatus.BootPolarity)
+            if(0 == BootStatus->BootPolarity)
             {
                 EraseSector = BOOT0_FLAG_SECTOR;
                 SwitchBank(0);
@@ -525,7 +524,6 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
                 EraseSector = BOOT1_FLAG_SECTOR;
                 SwitchBank(1);
             }
-            DINT;
             /*Erase Current boot Flash */
             prv_Sector_Erase(EraseSector);
         }
@@ -537,7 +535,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus)
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
             ServiceDog();
         }
-        st_BootFlag.ucAppMemoryErase = false;
+        stBootFlag->ucAppMemoryErase = false;
         DisableDog();
         DELAY_US(200000L);
         RESET();

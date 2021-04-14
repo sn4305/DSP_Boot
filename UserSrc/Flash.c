@@ -8,7 +8,7 @@
 #include "F28x_Project.h"
 #include "F021_F2837xS_C28x.h"
 
-extern St_BootFlag st_BootFlag;
+extern St_BootFlag s_stBootFlag;
 
 static const Uint32 sectAddress[FLASH_SECTOR_NUM] =
 {
@@ -158,7 +158,7 @@ static void prv_EraseLogisticFlash(void)
     else
     {
         /* No Error, send positive response*/
-        st_BootFlag.ucLogMemoryErase = true;
+        s_stBootFlag.ucLogMemoryErase = true;
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
@@ -219,7 +219,7 @@ static uint16_t prv_ClearAppFlag(void)
     else
     {
         /* No Error, send positive response*/
-        st_BootFlag.ucLogMemoryErase = true;
+        s_stBootFlag.ucLogMemoryErase = true;
         fail = 0;
 //        SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
@@ -405,7 +405,7 @@ uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len)
 }
 
 #pragma CODE_SECTION(WriteLogisticInfo,".TI.ramfunc");
-void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea)
+void WriteLogisticInfo(volatile uint8_t *Data, uint8_t MemoryArea)
 {
     uint8_t i = 0;
     Un_FLAG Flag;

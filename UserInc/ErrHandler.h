@@ -35,30 +35,30 @@
 #define MEMORY_AREA                     0x20        /* Value of Memory Area for OBC*/
 #endif
 
-#define HW_VERSION_ADDRESS              0x0C6004    /* Address of Hardware Version*/
-#define HW_VERSION_CRC                  0x0C6008    /* Address of Hardware Version CRC*/
-#define HW_SERIAL_NUMBER_ADDRESS        0x0C600C    /* Address of Hardware Serial Number*/
-#define HW_SERIAL_NUMBER_CRC            0x0C6010    /* Address of Hardware Serial Number CRC*/
+#define HW_VERSION_ADDRESS              0x0C6004UL    /* Address of Hardware Version*/
+#define HW_VERSION_CRC                  0x0C6008UL    /* Address of Hardware Version CRC*/
+#define HW_SERIAL_NUMBER_ADDRESS        0x0C600CUL    /* Address of Hardware Serial Number*/
+#define HW_SERIAL_NUMBER_CRC            0x0C6010UL    /* Address of Hardware Serial Number CRC*/
 #define HW_VERSION_SIZE                 2           /* Size in bytes of Hardware version*/
 #define HW_SERIAL_NUMBER_SIZE           7           /* Size in bytes of Hardware Serial Number*/
 
-#define APP_VERSION_ADDRESS             0x0B7FF8    /* Address of Application sw Version*/
-#define APP_CRC_ADDRESS                 0x0B7FFC    /* Address of Application CRC*/
+#define APP_VERSION_ADDRESS             0x0B7FF8UL    /* Address of Application sw Version*/
+#define APP_CRC_ADDRESS                 0x0B7FFCUL    /* Address of Application CRC*/
 #define MAX_SN                          0x25u       /* max sequence number, range: 0x01~0x25*/
 #define MAX_BLOCK_SIZE                  256u
 #define CRC_LENGTH                      2u          /* CRC Length in Bytes*/
 
-#define BOOT_TOTAL_LEN                  0x5FF8u     /* Boot sector Length in 16bits, include Boot PN*/
-#define APP_TOTAL_LEN                   0x2FFFCu    /* App sector Length in 16bits, include APP PN */
+#define BOOT_TOTAL_LEN                  0x5FF8U     /* Boot sector Length in 16bits, include Boot PN*/
+#define APP_TOTAL_LEN                   0x2FFFCU    /* App sector Length in 16bits, include APP PN */
 
-#define FLAG_TOTAL_LEN                  17u
-#define FLAG_APPLI_ADDRESS              0x000C6000  /* Address of application valid Flag*/
-#define MEM_APPCODE_START_ADDRESS       0x88000
-#define MEM_APPCODE_END_ADDRESS         0xB7FF8
+#define FLAG_TOTAL_LEN                  17U
+#define FLAG_APPLI_ADDRESS              0x000C6000UL  /* Address of application valid Flag*/
+#define MEM_APPCODE_START_ADDRESS       0x88000UL
+#define MEM_APPCODE_END_ADDRESS         0xB7FF8UL
 
-#define BootEvenValid                   0xBA5EBA11
-#define BootOddValid                    0xC0DEBA5E
-#define APP_VALID                       0xA5C6BD72      /* Value of Flag when application is valid*/
+#define BootEvenValid                   0xBA5EBA11UL
+#define BootOddValid                    0xC0DEBA5EUL
+#define APP_VALID                       0xA5C6BD72UL      /* Value of Flag when application is valid*/
 
 #define MEM_PREBOOT_START_ADDRESS       0x80000
 
@@ -69,10 +69,10 @@
 #define BOOT1_FLAG_SECTOR               0x10000    /* Sector Q, 0b1  0000 0000 0000 0000 */
 #define APP0_SECTOR                     0x03F0      /* Sector E|F|G|H|I|J, 0b0011 1111 0000*/
 
-#define FLASH_BYTES_PER_WORD            2u
+#define FLASH_BYTES_PER_WORD            2U
 
 
-#define EXIT_FUNC_ADDR                  0x81000     /* Restore Exit_Boot, absolute address*/
+#define EXIT_FUNC_ADDR                  0x81000UL     /* Restore Exit_Boot, absolute address*/
 typedef void (*pExitBoot)(uint32_t);
 extern pExitBoot exitboot;
 //extern void ExitBoot(uint32 EntryAddr);
@@ -135,7 +135,7 @@ uint8_t IsSecurityValid(tCANMsgObject Received_Message);
 
 uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked);
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo);
+uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag);
 
 uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st_TransDataInfo);
 
@@ -143,11 +143,11 @@ uint8_t IsCRCRequestValid(tCANMsgObject Received_Message);
 
 void LogiticRequestHandle(uint8_t Identifier);
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag);
+void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag);
 
-bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys Info);
+bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info);
 
-void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys BootStatus);
+void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag);
 
 void LogisticCRCWrite(tCANMsgObject ReceivedMessage);
 

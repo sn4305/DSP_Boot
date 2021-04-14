@@ -12,19 +12,19 @@
 #include "flash_programming_c28.h" // Flash API example header file
 
 /*      SECTION B|C|D, BOOT0     START: 0x00082000 */
-#define MEM_BOOT0_START_ADDRESS         0x00082000
-#define BOOT0_PN_ADDRESS                0x00087FF4    /* Address of Boot0 ID*/
-#define BOOT0_CRC_ADDRESS               0x00087FF8
-#define MEM_BOOT0_END_ADDRESS           0x00087FFC    /* End of boot memory area*/
-#define FLAG_BOOT0_ADDRESS              0x00087FFC
+#define MEM_BOOT0_START_ADDRESS         0x00082000UL
+#define BOOT0_PN_ADDRESS                0x00087FF4UL    /* Address of Boot0 ID*/
+#define BOOT0_CRC_ADDRESS               0x00087FF8UL
+#define MEM_BOOT0_END_ADDRESS           0x00087FFCUL    /* End of boot memory area*/
+#define FLAG_BOOT0_ADDRESS              0x00087FFCUL
 /*      SECTION B|C|D, BOOT0     END: 0x03FFF */
 
 /*      SECTION O|P|Q, BOOT1     START: 0x000C0000 */
-#define MEM_BOOT1_START_ADDRESS         0x000C0000
-#define BOOT1_PN_ADDRESS                0x000C5FF4    /* Address of Boot0 ID*/
-#define BOOT1_CRC_ADDRESS               0x000C5FF8
-#define MEM_BOOT1_END_ADDRESS           0x000C5FFC    /* End of boot memory area*/
-#define FLAG_BOOT1_ADDRESS              0x000C5FFC
+#define MEM_BOOT1_START_ADDRESS         0x000C0000UL
+#define BOOT1_PN_ADDRESS                0x000C5FF4UL    /* Address of Boot0 ID*/
+#define BOOT1_CRC_ADDRESS               0x000C5FF8UL
+#define MEM_BOOT1_END_ADDRESS           0x000C5FFCUL    /* End of boot memory area*/
+#define FLAG_BOOT1_ADDRESS              0x000C5FFCUL
 /*      SECTION O|P|Q, BOOT1     END: 0x000C5FFE */
 
 #define FLASH_PAGE_SIZE_HEXA            0x400   /* Considering 512 words per page, and 2 flash addresses per word*/
@@ -34,7 +34,7 @@
 
 
 #define FLASH_SECTOR_NUM                28U
-#define FLASH_WORDS_PER_ROW             128u
+#define FLASH_WORDS_PER_ROW             128U
 
 typedef struct
 {
@@ -63,6 +63,6 @@ uint16_t SwitchBank(uint16_t BankIdx);
 
 uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
 
-void WriteLogisticInfo(uint8_t *Data, uint8_t MemoryArea);
+void WriteLogisticInfo(volatile uint8_t *Data, uint8_t MemoryArea);
 
 #endif /* USERINC_FLASH_H_ */
