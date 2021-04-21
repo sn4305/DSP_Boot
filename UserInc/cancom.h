@@ -71,10 +71,7 @@ typedef enum {
 } CAN_CMD;
 
 
-extern unsigned char txMsgData[8];
-extern unsigned char rxMsgData[8];
-extern tCANMsgObject sTXCANMessage;
-extern tCANMsgObject sRXCANMessage;
+extern tCANMsgObject g_stRXCANMessage; /*global CAN message buffer used in interrupt.c to receive temporal message*/
 
 void InitCana(void);
 void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config);

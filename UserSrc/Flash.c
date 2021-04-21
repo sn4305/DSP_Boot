@@ -158,7 +158,7 @@ static void prv_EraseLogisticFlash(void)
     else
     {
         /* No Error, send positive response*/
-        s_stBootFlag.ucLogMemoryErase = true;
+        s_stBootFlag.bLogMemoryErase = true;
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
@@ -219,7 +219,7 @@ static uint16_t prv_ClearAppFlag(void)
     else
     {
         /* No Error, send positive response*/
-        s_stBootFlag.ucLogMemoryErase = true;
+        s_stBootFlag.bLogMemoryErase = true;
         fail = 0;
 //        SendGenericResponse(MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
@@ -285,7 +285,7 @@ void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag
     }
     else
     {
-        if (ptr_st_BootFlag->FlashAuthorization)
+        if (ptr_st_BootFlag->bFlashAuthorization)
         {
             if ((MemoryArea & 0x0F) == 0)
             {
@@ -318,7 +318,7 @@ void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag
             else
             {
                 /*Send OK*/
-                ptr_st_BootFlag->ucAppMemoryErase = true;
+                ptr_st_BootFlag->bAppMemoryErase = true;
                 SendGenericResponse(MEMORY_AREA, NO_ERROR);
             }
             ReleaseFlashPump();

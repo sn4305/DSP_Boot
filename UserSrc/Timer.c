@@ -5,12 +5,12 @@
  *      Author: E9981231
  */
 
-#include <Interrupt.h>
 #include "Timer.h"
 #include "F28x_Project.h"
 
 /* defined in interrupt.c */
 extern volatile uint16_t u16Tick;
+extern __interrupt void cpu_timer0_isr(void);
 
 /* used for 5s boot overtime */
 TMR_OBJ tmr1_obj;

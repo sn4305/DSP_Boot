@@ -8,8 +8,8 @@
 #include "ErrHandler.h"
 #include "CRC.h"
 
-extern const uint16_t u40BootVersion[3];
-extern uint32_t u32UpdataFlag;
+extern const uint16_t g_u40BootVersion[3];
+extern uint32_t g_u32UpdataFlag;
 
 extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
 extern uint16_t SwitchBank(uint16_t BankIdx);
@@ -20,28 +20,28 @@ pExitBoot exitboot = (pExitBoot)EXIT_FUNC_ADDR;
 static void GetInformation(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     /* Start of data write : reception of address and length */
-    pSt_TransDataInfo->Address = ((uint32_t) Received_Message[2] << 16) +
+    pSt_TransDataInfo->u32Address = ((uint32_t) Received_Message[2] << 16) +
             ((uint32_t) Received_Message[3] << 8) +
             (uint32_t) (Received_Message[4]);
 
-    pSt_TransDataInfo->Size = ((uint16_t) Received_Message[5] << 8) + (uint16_t) Received_Message[6];
+    pSt_TransDataInfo->u16Size = ((uint16_t) Received_Message[5] << 8) + (uint16_t) Received_Message[6];
 }
 
-uint8_t IsRequestValid(tCANMsgObject Received_Message)
+uint8_t IsRequestValid(stCanMsgObj Received_Message)
 {
     uint8_t error = NO_ERROR;
-    if(Received_Message.ui32MsgLen != 8)
+    if(Received_Message.u16MsgLen != 8)
     {
         error = WRONG_REQUEST_FORMAT;
     }
     return error;
 }
 
-uint8_t IsLogisticValid(tCANMsgObject Received_Message)
+uint8_t IsLogisticValid(stCanMsgObj Received_Message)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
-    if(Received_Message.ui32MsgLen != 1)
+    uint8_t data0 = *(Received_Message.pu8MsgData);
+    if(Received_Message.u16MsgLen != 1)
     {
         error = WRONG_REQUEST_FORMAT;
     }
@@ -56,11 +56,11 @@ uint8_t IsLogisticValid(tCANMsgObject Received_Message)
     return error;
 }
 
-uint8_t IsSWVersionCheckValid(tCANMsgObject Received_Message)
+uint8_t IsSWVersionCheckValid(stCanMsgObj Received_Message)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
-    if(Received_Message.ui32MsgLen != 6)
+    uint8_t data0 = *(Received_Message.pu8MsgData);
+    if(Received_Message.u16MsgLen != 6)
     {
         error = WRONG_REQUEST_FORMAT;
     }
@@ -71,26 +71,26 @@ uint8_t IsSWVersionCheckValid(tCANMsgObject Received_Message)
     }
     return error;
 }
-uint8_t IsSecurityValid(tCANMsgObject Received_Message)
+uint8_t IsSecurityValid(stCanMsgObj Received_Message)
 {
     uint8_t error = NO_ERROR;
-    if (Received_Message.ui32MsgLen != 8)
+    if (Received_Message.u16MsgLen != 8)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(*Received_Message.pucMsgData != 0x20 && *Received_Message.pucMsgData != 0x40)
+    else if(*Received_Message.pu8MsgData != 0x20 && *Received_Message.pu8MsgData != 0x40)
     {
         error = ID_NOT_SUPPORTED;
     }
     else
     {
-        bool IsKeyValid = (*(Received_Message.pucMsgData+1) == 0x4D);
-        IsKeyValid &= (*(Received_Message.pucMsgData+2) == 0x41);
-        IsKeyValid &= (*(Received_Message.pucMsgData+3) == 0x52);
-        IsKeyValid &= (*(Received_Message.pucMsgData+4) == 0x54);
-        IsKeyValid &= (*(Received_Message.pucMsgData+5) == 0x45);
-        IsKeyValid &= (*(Received_Message.pucMsgData+6) == 0x4B);
-        IsKeyValid &= (*(Received_Message.pucMsgData+7) == 0x30);
+        bool IsKeyValid = (*(Received_Message.pu8MsgData+1) == 0x4D);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+2) == 0x41);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+3) == 0x52);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+4) == 0x54);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+5) == 0x45);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+6) == 0x4B);
+        IsKeyValid &= (*(Received_Message.pu8MsgData+7) == 0x30);
         if (IsKeyValid)
         {
             error = NO_ERROR;
@@ -103,11 +103,11 @@ uint8_t IsSecurityValid(tCANMsgObject Received_Message)
     return error;
 }
 
-uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
+uint8_t IsEraseValid(stCanMsgObj Received_Message, bool bSecurityUnlocked)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
-    if (Received_Message.ui32MsgLen != 1)
+    uint8_t data0 = *(Received_Message.pu8MsgData);
+    if (Received_Message.u16MsgLen != 1)
     {
         error = WRONG_REQUEST_FORMAT;
     }
@@ -118,7 +118,7 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if(false == ucSecurityUnlocked)
+    else if(false == bSecurityUnlocked)
     {
         error = SECURITY_LOCKED;
     }
@@ -128,17 +128,21 @@ uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked)
     return error;
 }
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag)
+uint8_t IsTransferInfoValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
+    uint8_t data0 = *(Received_Message.pu8MsgData);
 
-    GetInformation(Received_Message.pucMsgData, pSt_TransDataInfo);
-    if (Received_Message.ui32MsgLen != 8)
+    if(NULL == pSt_TransDataInfo || NULL == stBootFlag)
+    {
+        return error;
+    }
+    GetInformation(Received_Message.pu8MsgData, pSt_TransDataInfo);
+    if (Received_Message.u16MsgLen != 8)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(stBootFlag->ucSecurityUnlocked != true)
+    else if(stBootFlag->bSecurityUnlocked != true)
     {
         error = SECURITY_LOCKED;
     }
@@ -149,25 +153,25 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (stBootFlag->ucAppMemoryErase  != true) )
+    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (stBootFlag->bAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
     }
-    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && stBootFlag->ucLogMemoryErase != true)
+    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && stBootFlag->bLogMemoryErase != true)
     {
         error = MEMORY_NOT_BLANK;
     }
-    else if((pSt_TransDataInfo->MemArea & 0x0F) == 1 && pSt_TransDataInfo->Size != HW_VERSION_SIZE)
+    else if((pSt_TransDataInfo->u8MemArea & 0x0F) == 1 && pSt_TransDataInfo->u16Size != HW_VERSION_SIZE)
     {
         /* Transfer Data for HW version is wrong*/
         error = WRONG_REQUEST_FORMAT;
     }
-    else if((pSt_TransDataInfo->MemArea & 0x0F) == 2 && pSt_TransDataInfo->Size != HW_SERIAL_NUMBER_SIZE)
+    else if((pSt_TransDataInfo->u8MemArea & 0x0F) == 2 && pSt_TransDataInfo->u16Size != HW_SERIAL_NUMBER_SIZE)
     {
         /* Transfer Data for HW Serial Number is wrong*/
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(pSt_TransDataInfo->Size > MAX_BLOCK_SIZE)
+    else if(pSt_TransDataInfo->u16Size > MAX_BLOCK_SIZE)
     {
         error = WRONG_REQUEST_FORMAT;
     }
@@ -178,10 +182,10 @@ uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pS
     return error;
 }
 
-uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st_TransDataInfo)
+uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *st_TransDataInfo)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
+    uint8_t data0 = *(Received_Message.pu8MsgData);
 
     if(TMR2_SoftwareCounterGet() >= 5)
     {
@@ -191,22 +195,27 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
         return error;
     }
 
-    if(!(st_TransDataInfo->ValidInfo))
+    if(NULL == st_TransDataInfo)
+    {
+        return error;
+    }
+
+    if(!(st_TransDataInfo->bValidInfo))
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(data0 == (st_TransDataInfo->ptr_St_Data->SN - 1))
+    else if(data0 == (st_TransDataInfo->pst_Data->u8SN - 1))
     {
         /* Same sequence number as previous frame: ignore the frame*/
         error = SAME_SN;
     }
-    else if(data0 != (st_TransDataInfo->ptr_St_Data->SN + 1) || data0 > MAX_SN)
+    else if(data0 != (st_TransDataInfo->pst_Data->u8SN + 1) || data0 > MAX_SN)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(((st_TransDataInfo->MemArea & 0x0F) == 0 || (st_TransDataInfo->MemArea & 0x0F) == 4) && Received_Message.ui32MsgLen != 8)
+    else if(((st_TransDataInfo->u8MemArea & 0x0F) == 0 || (st_TransDataInfo->u8MemArea & 0x0F) == 4) && Received_Message.u16MsgLen != 8)
     {
-        if((st_TransDataInfo->ptr_St_Data->RecvDataIdx + Received_Message.ui32MsgLen - CRC_LENGTH - 1) == st_TransDataInfo->Size)
+        if((st_TransDataInfo->pst_Data->u16RecvDataIdx + Received_Message.u16MsgLen - CRC_LENGTH - 1) == st_TransDataInfo->u16Size)
         {
             error = NO_ERROR;
         }
@@ -222,11 +231,11 @@ uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st
     return error;
 }
 
-uint8_t IsCRCRequestValid(tCANMsgObject Received_Message)
+uint8_t IsCRCRequestValid(stCanMsgObj Received_Message)
 {
     uint8_t error = NO_ERROR;
-    uint8_t data0 = *(Received_Message.pucMsgData);
-    if(Received_Message.ui32MsgLen != 3)
+    uint8_t data0 = *(Received_Message.pu8MsgData);
+    if(Received_Message.u16MsgLen != 3)
     {
         error = WRONG_REQUEST_FORMAT;
     }
@@ -307,11 +316,11 @@ void LogiticRequestHandle(uint8_t Identifier)
             uint8_t Data[5];
             /*Reconstruct PN number
              * 0xAABBCCDDEE is sent 0xAA, 0xBB...*/
-            Data[0] = u40BootVersion[0] >> 8;
-            Data[1] = u40BootVersion[0];
-            Data[2] = u40BootVersion[1] >> 8;
-            Data[3] = u40BootVersion[1];
-            Data[4] = u40BootVersion[2] >> 8;
+            Data[0] = g_u40BootVersion[0] >> 8;
+            Data[1] = g_u40BootVersion[0];
+            Data[2] = g_u40BootVersion[1] >> 8;
+            Data[3] = g_u40BootVersion[1];
+            Data[4] = g_u40BootVersion[2] >> 8;
             /*Send*/
             SendLogisticResponse(Identifier, Data, 5);
             break;
@@ -342,13 +351,13 @@ void LogiticRequestHandle(uint8_t Identifier)
     }
 }
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag)
+void SWVersionComparetHandle(stCanMsgObj Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag)
 {
     uint16_t *pVer;
     uint32_t PN_Addr;
     uint8_t i, DiffErr, RespMemArea;
     uint8_t ActualVersion[5];
-    uint8_t *data = (uint8_t *)(Received_Message.pucMsgData);
+    uint8_t *data = (uint8_t *)(Received_Message.pu8MsgData);
 
     if((*data & 0x0F) == 4)
     {
@@ -380,11 +389,11 @@ void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys *Info, pS
     }
     if(DiffErr)
     {
-        ptr_st_BootFlag->FlashAuthorization = true;
+        ptr_st_BootFlag->bFlashAuthorization = true;
     }
     else
     {
-        ptr_st_BootFlag->FlashAuthorization = false;
+        ptr_st_BootFlag->bFlashAuthorization = false;
     }
     SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }
@@ -471,17 +480,17 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
 }
 
 #pragma CODE_SECTION(CRCWrite,".TI.ramfunc");
-void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag)
+void CRCWrite(stCanMsgObj ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag)
 {
     uint16_t WriteBuf[2];
     uint16_t ReceivedCRC;
     uint16_t CRCFlash;
     uint32_t EraseSector;
 
-    u32UpdataFlag = 0;
-    ReceivedCRC = ((uint16_t) ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+    g_u32UpdataFlag = 0;
+    ReceivedCRC = ((uint16_t) ReceivedMessage.pu8MsgData[1] << 8) + ReceivedMessage.pu8MsgData[2];
 
-    if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+    if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 4)
     {
         /*Calculate CRC for boot memory area*/
         CRCFlash = CalcCRC_FLASH(0, BootStatus->OppositBootStartAddr, BOOT_TOTAL_LEN);
@@ -498,7 +507,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag 
         /*Send OK response */
         SendGenericResponse(MEMORY_AREA, NO_ERROR);
 
-        if((ReceivedMessage.pucMsgData[0] & 0x0F) == 4)
+        if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 4)
         {
             if(0 == BootStatus->BootPolarity)
             {
@@ -535,7 +544,7 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag 
             WriteFlash(FLAG_APPLI_ADDRESS, WriteBuf, 2);
             ServiceDog();
         }
-        stBootFlag->ucAppMemoryErase = false;
+        stBootFlag->bAppMemoryErase = false;
         DisableDog();
         DELAY_US(200000L);
         RESET();
@@ -548,15 +557,15 @@ void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag 
 
 }
 
-void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
+void LogisticCRCWrite(stCanMsgObj ReceivedMessage)
 {
     uint16_t ReceivedCRC, HardwareVersionRead, HardwareSNRead[4], DataForCRC[5], CRCCalc;
 
-    if((ReceivedMessage.pucMsgData[0] & 0x0F) == 1)
+    if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 1)
     {
         /* Hardware version case */
         /*Save received CRC*/
-        ReceivedCRC = (ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+        ReceivedCRC = (ReceivedMessage.pu8MsgData[1] << 8) + ReceivedMessage.pu8MsgData[2];
         /*Read Saved data*/
         HardwareVersionRead = (uint16_t) Read_Data_Word(HW_VERSION_ADDRESS);
         /*Calculate CRC including received CRC*/
@@ -583,11 +592,11 @@ void LogisticCRCWrite(tCANMsgObject ReceivedMessage)
             SendGenericResponse(MEMORY_AREA, WRONG_CRC);
         }
     }
-    else if((ReceivedMessage.pucMsgData[0] & 0x0F) == 2)
+    else if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 2)
     {
         /*Serial Number case*/
         /* Save in RAM received CRC*/
-        ReceivedCRC = (ReceivedMessage.pucMsgData[1] << 8) + ReceivedMessage.pucMsgData[2];
+        ReceivedCRC = (ReceivedMessage.pu8MsgData[1] << 8) + ReceivedMessage.pu8MsgData[2];
 
         /*Read Saved Serial Number*/
         HardwareSNRead[0] = Read_Data_Word(HW_SERIAL_NUMBER_ADDRESS);

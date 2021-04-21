@@ -13,11 +13,11 @@ volatile uint16_t u16Tick = 0;
 extern TMR_OBJ tmr1_obj, tmr2_obj;
 
 /* global variable, only be modified in CAN rx interrupt function, and read by main state machine */
-volatile bool CAN_RX_Flag = 0;
+volatile bool g_bCAN_RX_Flag = 0;
 volatile CAN_CMD g_enumCAN_Command = CMD_ModeRequest;
-volatile uint16_t  Can_u16errFlag = 0;
-volatile uint8_t g_u8rxMsgData[8] = {0};
-volatile tCANMsgObject g_RXCANMsg;
+volatile uint16_t  g_u16CANerrFlag = 0;
+static volatile uint8_t s_u8rxMsgData[8] = {0};
+volatile stCanMsgObj g_stRXCANMsg = { 0, 0, s_u8rxMsgData};
 
 #pragma CODE_SECTION(cpu_timer0_isr,".TI.ramfunc");
 #pragma CODE_SECTION(canaISR,".TI.ramfunc");
@@ -90,7 +90,7 @@ canaISR(void)
             //
             // Set a flag to indicate some errors may have occurred.
             //
-            Can_u16errFlag = 1;
+            g_u16CANerrFlag = 1;
         }
     }
     //
@@ -98,17 +98,18 @@ canaISR(void)
     //
     else if((status0 >= ID_RX_OBJ_START) && (status0 <= ID_RX_OBJ_END))
     {
-        CAN_RX_Flag = 1;
+        g_bCAN_RX_Flag = 1;
         //
         // Get the received message
         //
-        CANMessageGet(CANA_BASE, status0, &sRXCANMessage, true);
+        CANMessageGet(CANA_BASE, status0, &g_stRXCANMessage, true);
         /* copy CAN rxmsg to front end buffer which is used in main state machine*/
         for(idx = 0; idx < 8; idx++)
         {
-            g_u8rxMsgData[idx] = rxMsgData[idx];
+            s_u8rxMsgData[idx] = *(g_stRXCANMessage.pucMsgData + idx);
         }
-        memcpy((void *)&g_RXCANMsg, (const void *)&sRXCANMessage, sizeof(tCANMsgObject));
+        g_stRXCANMsg.u32MsgID = g_stRXCANMessage.ui32MsgID;
+        g_stRXCANMsg.u16MsgLen = g_stRXCANMessage.ui32MsgLen;
 
         switch(status0) //Message Obj ID
         {  /* judge CANid to see which CAN Command is received*/
@@ -158,7 +159,7 @@ canaISR(void)
         //
         // Since the message was received, clear any error flags.
         //
-        Can_u16errFlag = 0;
+        g_u16CANerrFlag = 0;
     }
     //
     // If something unexpected caused the interrupt, this would handle it.

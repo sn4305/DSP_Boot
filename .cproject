@@ -87,7 +87,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="28377S_BOOT_FLASH_lnk.cmd|common/source/F2837xS_CodeStartBranch.asm|common/deprecated/driverlib/uart.c|common/deprecated/utils|common/source/F2837xS_I2C.c|common/source/F2837xS_Spi.c|FlashApi_f2837xs/lib/F021_API_F2837xS.lib|common/source/F2837xS_Upp.c|common/source/F2837xS_TempSensorConv.c|common/source/F2837xS_SWPrioritizedPieVect.c|common/source/F2837xS_sdfm_drivers.c|common/source/F2837xS_Sci.c|common/source/F2837xS_sci_io.c|common/source/F2837xS_EQep.c|common/source/F2837xS_EPwm.c|common/source/F2837xS_Emif.c|common/source/F2837xS_ECap.c|common/source/F2837xS_Adc.c|headers/cmd/F2837xS_Headers_BIOS.cmd|common/cmd" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="common/source/F2837xS_CodeStartBranch.asm|common/deprecated/driverlib/uart.c|common/deprecated/utils|common/source/F2837xS_I2C.c|common/source/F2837xS_Spi.c|FlashApi_f2837xs/lib/F021_API_F2837xS.lib|common/source/F2837xS_Upp.c|common/source/F2837xS_TempSensorConv.c|common/source/F2837xS_SWPrioritizedPieVect.c|common/source/F2837xS_sdfm_drivers.c|common/source/F2837xS_Sci.c|common/source/F2837xS_sci_io.c|common/source/F2837xS_EQep.c|common/source/F2837xS_EPwm.c|common/source/F2837xS_Emif.c|common/source/F2837xS_ECap.c|common/source/F2837xS_Adc.c|headers/cmd/F2837xS_Headers_BIOS.cmd|common/cmd" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

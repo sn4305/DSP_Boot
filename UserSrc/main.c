@@ -10,6 +10,7 @@ Copyright 2011 - Eaton, All Rights Reserved.
 Author              Date               Ver#        Description (CR#)
 Dongdong Yang       20210225           00          Init for Base project 2nd DSP(28377s) Bootloader
 Dongdong Yang       20210413           01          Optimize code according to coding guideline V1.1
+Dongdong Yang       20210421           02          Optimize variable name according to coding guideline V1.1
 ******************************************************************
 (***).
 */
@@ -20,9 +21,9 @@ static BootMachineStates s_stState = State_TRANSITION;
 static MyBootSys s_stBootStatus;
 uint16_t s_u16AddrCfg = 0; //OBC address configuration
 St_BootFlag s_stBootFlag = {false, false, false, false};
-uint8_t RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
-St_TransData st_TransData = {0, RecvBuf, 0};
-St_TransDataInfo st_TransDataInfo = {0, 0, 0, 0, 0, &st_TransData};
+uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
+St_TransData s_stTransData = {0, s_u8RecvBuf, 0};
+St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};
 
 /* function declaration */
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
@@ -42,11 +43,11 @@ uint32_t MainBoot(void);
 #pragma CODE_SECTION(main,".preboot");
 uint32_t main(void)
 {//Pre boot sequence
-   if(boot_even_flag == BootEvenValid)
+   if(boot_even_flag == BOOT_EVEN_VALID)
    {
-       if(0x0101 == u40BootVersion[0]
-          && 0x0301 == u40BootVersion[1]
-          && 0x00FF == u40BootVersion[2])
+       if(0x0101 == g_u40BootVersion[0]
+          && 0x0301 == g_u40BootVersion[1]
+          && 0x00FF == g_u40BootVersion[2])
        {
            /* if it is init Boot0, then jump to Mainboot*/
            MainBoot();
@@ -57,7 +58,7 @@ uint32_t main(void)
            StartBootEven();
        }
    }
-   else if(boot_odd_flag == BootOddValid)
+   else if(boot_odd_flag == BOOT_ODD_VALID)
    {
        StartBootOdd();
    }
@@ -158,7 +159,7 @@ uint32_t main(void)
 
     s_stState = State_TRANSITION;
     Init_BootFlag();
-    Init_TransParam(&st_TransDataInfo);
+    Init_TransParam(&s_stTransDataInfo);
     IdentifyBoot(&s_stBootStatus);
 
     /*  ||========================================================||
@@ -172,13 +173,13 @@ uint32_t main(void)
     *   ||                 STATE: TRANSITION                      ||
     *   ||========================================================||  */
             case State_TRANSITION:
-                if( UPDATE_APP_RQST != u32UpdataFlag && APP_VALID ==  APP_VALID_FLAG)
+                if( UPDATE_APP_RQST != g_u32UpdataFlag && APP_VALID ==  APP_VALID_FLAG)
                 {/* FlagAppli is valid, jump to APP*/
                     DisableDog();
                     DELAY_US(200000L);
                     StartApplication();
                 }
-                else if(UPDATE_APP_RQST == u32UpdataFlag)
+                else if(UPDATE_APP_RQST == g_u32UpdataFlag)
                 {/* received boot request from APP, jump to boot*/
                     TMR1_Start();
                     TMR1_SoftwareCounterClear();
@@ -197,20 +198,20 @@ uint32_t main(void)
     *   ||========================================================||  */
             case State_DEFAULT:
                 ServiceDog();
-                if(CAN_RX_Flag)
+                if(g_bCAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
                     if(CMD_ModeRequest == g_enumCAN_Command)
                     {
-                        if(BOOT_MODE == (g_u8rxMsgData[4] & 0x07))
+                        if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
                         {
-                            u32UpdataFlag = UPDATE_APP_RQST;
+                            g_u32UpdataFlag = UPDATE_APP_RQST;
                             SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                             s_stState = State_BOOT; /* <====== GO BOOT  */
                         }
-                        else if(DEFAULT_MODE == (g_u8rxMsgData[4] & 0x07))
+                        else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
                         {
-                            u32UpdataFlag = 0;
+                            g_u32UpdataFlag = 0;
                             DisableDog();
                             DELAY_US(200000L);
                             RESET();
@@ -226,7 +227,7 @@ uint32_t main(void)
                 if (TMR1_SoftwareCounterGet() >= 500)
                 {   /*500 * 10ms = 5000ms */
                     /*5s Timeout*/
-                    u32UpdataFlag = 0;
+                    g_u32UpdataFlag = 0;
                     Init_BootFlag();
                     TMR1_SoftwareCounterClear();
                     DisableDog();
@@ -237,7 +238,7 @@ uint32_t main(void)
                 ServiceDog();
 
                 /*Wait for message*/
-                if(CAN_RX_Flag)
+                if(g_bCAN_RX_Flag)
                 {
                     Clr_CanRxFlag();
                     TMR1_SoftwareCounterClear();
@@ -246,23 +247,23 @@ uint32_t main(void)
                     {
                         case CMD_ModeRequest:
                             /* Mode Request*/
-                            error = IsRequestValid(g_RXCANMsg);
+                            error = IsRequestValid(g_stRXCANMsg);
                             if(error)
                             {
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
                             else
                             {
-                                if(BOOT_MODE == (g_u8rxMsgData[4] & 0x07))
+                                if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
                                 {/* Enter boot mode request : Send positive Response
                                  * No Action*/
-                                    Init_TransParam(&st_TransDataInfo);
+                                    Init_TransParam(&s_stTransDataInfo);
                                     SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                                 }
-                                else if(DEFAULT_MODE == (g_u8rxMsgData[4] & 0x07))
+                                else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
                                 {
                                     /* Reset to preboot*/
-                                    u32UpdataFlag = 0;
+                                    g_u32UpdataFlag = 0;
                                     Init_BootFlag();
                                     DisableDog();
                                     DELAY_US(200000L);
@@ -277,44 +278,44 @@ uint32_t main(void)
 
                         case CMD_LogisticRequest:
                             /* Logistic Request*/
-                            error = IsLogisticValid(g_RXCANMsg);
+                            error = IsLogisticValid(g_stRXCANMsg);
                             if (error != 0)
                             {
                                 /* Error case */
-                                SendGenericResponse(g_u8rxMsgData[0] & 0xE, error);
+                                SendGenericResponse(g_stRXCANMsg.pu8MsgData[0] & 0xE, error);
                             }
                             else
                             {
                                 /* Send response to request */
-                                LogiticRequestHandle(g_u8rxMsgData[0]);
+                                LogiticRequestHandle(g_stRXCANMsg.pu8MsgData[0]);
                             }
                             break;
 
                         case CMD_SWVersionCheck:
-                            error = IsSWVersionCheckValid(g_RXCANMsg);
+                            error = IsSWVersionCheckValid(g_stRXCANMsg);
                             if (error)
                             {
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
                             else
                             {
-                                SWVersionComparetHandle(g_RXCANMsg, &s_stBootStatus, &s_stBootFlag);
+                                SWVersionComparetHandle(g_stRXCANMsg, &s_stBootStatus, &s_stBootFlag);
                             }
                             break;
 
                         case CMD_SecurityAccess:
-                            error = IsSecurityValid(g_RXCANMsg);
-                            if (MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0) || (MEMORY_AREA | 4) == g_u8rxMsgData[0])
+                            error = IsSecurityValid(g_stRXCANMsg);
+                            if (MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0) || (MEMORY_AREA | 4) == g_stRXCANMsg.pu8MsgData[0])
                             {
                                 if(!error)
                                 {
                                     /* Security unlocked successfully */
-                                    s_stBootFlag.ucSecurityUnlocked = true;
+                                    s_stBootFlag.bSecurityUnlocked = true;
                                 }
                                 else
                                 {
                                     /* Security unlocked fail         */
-                                    s_stBootFlag.ucSecurityUnlocked = false;
+                                    s_stBootFlag.bSecurityUnlocked = false;
                                 }
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
@@ -325,7 +326,7 @@ uint32_t main(void)
                             break;
 
                         case CMD_EraseMemory:
-                            error = IsEraseValid(g_RXCANMsg, s_stBootFlag.ucSecurityUnlocked);
+                            error = IsEraseValid(g_stRXCANMsg, s_stBootFlag.bSecurityUnlocked);
                             if(error)
                             {
                                 /* Error case : send NOK*/
@@ -333,9 +334,9 @@ uint32_t main(void)
                             }
                             else
                             {
-                                if(MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
+                                if(MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0))
                                 {
-                                    EraseFlash(g_u8rxMsgData[0], s_stBootStatus, &s_stBootFlag);
+                                    EraseFlash(g_stRXCANMsg.pu8MsgData[0], s_stBootStatus, &s_stBootFlag);
                                 }
                                 else
                                 {
@@ -349,7 +350,7 @@ uint32_t main(void)
                             TMR2_Start();
                             /* Initialize counter*/
                             TMR2_SoftwareCounterClear();
-                            error = IsTransferInfoValid(g_RXCANMsg, &st_TransDataInfo, &s_stBootFlag);
+                            error = IsTransferInfoValid(g_stRXCANMsg, &s_stTransDataInfo, &s_stBootFlag);
                             if (error)
                             {
                                 /* Send error message*/
@@ -357,22 +358,22 @@ uint32_t main(void)
                             }
                             else
                             {
-                                if (MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
+                                if (MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0))
                                 {
                                     /* Correct Memory area*/
-                                    if (g_u8rxMsgData[1] != (uint8_t) (st_TransDataInfo.BSC + 1))
+                                    if (g_stRXCANMsg.pu8MsgData[1] != (uint8_t) (s_stTransDataInfo.u8BSC + 1))
                                     {
-                                        /* Problem in BSC*/
+                                        /* Problem in u8BSC*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
                                     }
                                     else
                                     {
                                         /* Store information from frame, prepare for data reception*/
-                                        st_TransDataInfo.BSC++;
-                                        st_TransDataInfo.ptr_St_Data->SN = 0;
-                                        st_TransDataInfo.ptr_St_Data->RecvDataIdx = 0;
-                                        st_TransDataInfo.ValidInfo = true;
-                                        st_TransDataInfo.MemArea = g_u8rxMsgData[0];
+                                        s_stTransDataInfo.u8BSC++;
+                                        s_stTransDataInfo.pst_Data->u8SN = 0;
+                                        s_stTransDataInfo.pst_Data->u16RecvDataIdx = 0;
+                                        s_stTransDataInfo.bValidInfo = true;
+                                        s_stTransDataInfo.u8MemArea = g_stRXCANMsg.pu8MsgData[0];
                                     }
                                 }
                                 else
@@ -384,10 +385,10 @@ uint32_t main(void)
                             break;
 
                         case CMD_TransferData:
-                            if (MEMORY_AREA == (st_TransDataInfo.MemArea & 0xF0))
+                            if (MEMORY_AREA == (s_stTransDataInfo.u8MemArea & 0xF0))
                             {
                                 /*Request for this board*/
-                                error = IsTransferDataValid(g_RXCANMsg, &st_TransDataInfo);
+                                error = IsTransferDataValid(g_stRXCANMsg, &s_stTransDataInfo);
                                 if (error)
                                 {
                                     if (SAME_SN == error)
@@ -397,35 +398,35 @@ uint32_t main(void)
                                     }
                                     else
                                     {
-                                        st_TransDataInfo.ValidInfo = false;
-                                        st_TransDataInfo.ptr_St_Data->SN = 0;
+                                        s_stTransDataInfo.bValidInfo = false;
+                                        s_stTransDataInfo.pst_Data->u8SN = 0;
                                         SendGenericResponse(MEMORY_AREA, error);
                                     }
                                 }
-                                else if(MEMORY_AREA == st_TransDataInfo.MemArea || 4 == (st_TransDataInfo.MemArea & 0x0F))
+                                else if(MEMORY_AREA == s_stTransDataInfo.u8MemArea || 4 == (s_stTransDataInfo.u8MemArea & 0x0F))
                                 {
                                     /* Reset timeout counter*/
                                     TMR2_SoftwareCounterClear();
-                                    st_TransDataInfo.ptr_St_Data->SN++;
+                                    s_stTransDataInfo.pst_Data->u8SN++;
                                     /* Receive data*/
-                                    TreatData(g_u8rxMsgData, &st_TransDataInfo);
+                                    TreatData(g_stRXCANMsg.pu8MsgData, &s_stTransDataInfo);
                                 }
                                 else
                                 {
                                     /*Logistic information*/
-                                    if (1 == (st_TransDataInfo.MemArea & 0x0F) && g_RXCANMsg.ui32MsgLen != HW_VERSION_SIZE + 1)
+                                    if (1 == (s_stTransDataInfo.u8MemArea & 0x0F) && g_stRXCANMsg.u16MsgLen != HW_VERSION_SIZE + 1)
                                     {
                                         /* Transfer Data for HW version is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
                                     }
-                                    else if(2 == (st_TransDataInfo.MemArea & 0x0F) && g_RXCANMsg.ui32MsgLen != HW_SERIAL_NUMBER_SIZE + 1)
+                                    else if(2 == (s_stTransDataInfo.u8MemArea & 0x0F) && g_stRXCANMsg.u16MsgLen != HW_SERIAL_NUMBER_SIZE + 1)
                                     {
                                         /* Transfer Data for HW Serial Number is wrong*/
                                         SendGenericResponse(MEMORY_AREA, WRONG_REQUEST_FORMAT);
                                     }
                                     else
                                     {
-                                        WriteLogisticInfo(g_u8rxMsgData, st_TransDataInfo.MemArea);
+                                        WriteLogisticInfo(g_stRXCANMsg.pu8MsgData, s_stTransDataInfo.u8MemArea);
                                     }
                                 }
                             }
@@ -440,26 +441,26 @@ uint32_t main(void)
                         {
                             TMR2_Stop();
                             TMR2_SoftwareCounterClear();
-                            error = IsCRCRequestValid(g_RXCANMsg);
+                            error = IsCRCRequestValid(g_stRXCANMsg);
                             if(error)
                             {
                                 SendGenericResponse(MEMORY_AREA, error);
                             }
                             else
                             {
-                                if(MEMORY_AREA == (g_u8rxMsgData[0] & 0xF0))
+                                if(MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0))
                                 {
-                                    if(0 == (g_u8rxMsgData[0] & 0x0F) || 4 == (g_u8rxMsgData[0] & 0x0F))
+                                    if(0 == (g_stRXCANMsg.pu8MsgData[0] & 0x0F) || 4 == (g_stRXCANMsg.pu8MsgData[0] & 0x0F))
                                     {
-                                        if(s_stBootFlag.FlashAuthorization) // FlashAuthorization
+                                        if(s_stBootFlag.bFlashAuthorization) // bFlashAuthorization
                                         {
                                             ServiceDog();
-                                            CRCWrite(g_RXCANMsg, &s_stBootStatus, &s_stBootFlag);
+                                            CRCWrite(g_stRXCANMsg, &s_stBootStatus, &s_stBootFlag);
                                         }
                                     }
                                     else
                                     {
-                                        LogisticCRCWrite(g_RXCANMsg);
+                                        LogisticCRCWrite(g_stRXCANMsg);
                                     }
                                 }
                                 else
@@ -514,10 +515,10 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
     /* Extract data from received frame*/
     for(j = 1; j < 8; j++)
     {
-        if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx < pSt_TransDataInfo->Size + CRC_LENGTH)
+        if(pSt_TransDataInfo->pst_Data->u16RecvDataIdx < pSt_TransDataInfo->u16Size + CRC_LENGTH)
         { /*Data + CRC*/
-            *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->ptr_St_Data->RecvDataIdx) = Received_Message[j];
-            pSt_TransDataInfo->ptr_St_Data->RecvDataIdx++;
+            *(pSt_TransDataInfo->pst_Data->pu8RecvData + pSt_TransDataInfo->pst_Data->u16RecvDataIdx) = Received_Message[j];
+            pSt_TransDataInfo->pst_Data->u16RecvDataIdx++;
         }
         else
         { /*i == FLASH_BYTES_PER_ROW_PHANTOM*/
@@ -525,50 +526,50 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
             break;
         }
     }
-    if(pSt_TransDataInfo->ptr_St_Data->RecvDataIdx == pSt_TransDataInfo->Size + CRC_LENGTH)
+    if(pSt_TransDataInfo->pst_Data->u16RecvDataIdx == pSt_TransDataInfo->u16Size + CRC_LENGTH)
     {
-        if (s_stBootFlag.FlashAuthorization == true)
+        if (s_stBootFlag.bFlashAuthorization == true)
         {
             /* All data received form consecutive frames
              * Extract CRC from last Frame */
-            uint16_t CRC = ((uint16_t) *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->Size) << 8) +
-                    ((uint16_t) *(pSt_TransDataInfo->ptr_St_Data->pRecvData + pSt_TransDataInfo->Size + 1));
+            uint16_t CRC = ((uint16_t) *(pSt_TransDataInfo->pst_Data->pu8RecvData + pSt_TransDataInfo->u16Size) << 8) +
+                    ((uint16_t) *(pSt_TransDataInfo->pst_Data->pu8RecvData + pSt_TransDataInfo->u16Size + 1));
             /* Re-calculate CRC*/
-            uint16_t CRCCalc = CalcCRC_Bloc(pSt_TransDataInfo->Address, pSt_TransDataInfo->Size, pSt_TransDataInfo->MemArea, pSt_TransDataInfo->ptr_St_Data->pRecvData);
+            uint16_t CRCCalc = CalcCRC_Bloc(pSt_TransDataInfo->u32Address, pSt_TransDataInfo->u16Size, pSt_TransDataInfo->u8MemArea, pSt_TransDataInfo->pst_Data->pu8RecvData);
 
             if(CRCCalc == CRC)
             {
                 /*Write data to FLASH*/
-                bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->Address, pSt_TransDataInfo->MemArea, &s_stBootStatus);
+                bool CorrectArea = CheckWritingAddress(pSt_TransDataInfo->u32Address, pSt_TransDataInfo->u8MemArea, &s_stBootStatus);
                 ServiceDog();
                 if(CorrectArea)
                 {
                     /*Fill DataToCopy with 0xFF*/
-                    for(i = pSt_TransDataInfo->Size; i < MAX_BLOCK_SIZE; i++)
+                    for(i = pSt_TransDataInfo->u16Size; i < MAX_BLOCK_SIZE; i++)
                     {
-                        *(pSt_TransDataInfo->ptr_St_Data->pRecvData + i) = 0xFF;
+                        *(pSt_TransDataInfo->pst_Data->pu8RecvData + i) = 0xFF;
                     }
                     /*Convert structure for FLASH Routines*/
                     for(i = 0, j = 0; i < FLASH_WORDS_PER_ROW; i++)
                     {
-                        DataToFlash[i] = ((uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j) << 8) + (uint16_t)*(pSt_TransDataInfo->ptr_St_Data->pRecvData + j + 1);
+                        DataToFlash[i] = ((uint16_t)*(pSt_TransDataInfo->pst_Data->pu8RecvData + j) << 8) + (uint16_t)*(pSt_TransDataInfo->pst_Data->pu8RecvData + j + 1);
                         j += 2;
                     }
 
-                    if(WriteFlash(pSt_TransDataInfo->Address, DataToFlash, pSt_TransDataInfo->Size/2 + pSt_TransDataInfo->Size%2))
+                    if(WriteFlash(pSt_TransDataInfo->u32Address, DataToFlash, pSt_TransDataInfo->u16Size/2 + pSt_TransDataInfo->u16Size%2))
                     {
                         /* error happened when write flash*/
-                        if ((pSt_TransDataInfo->MemArea & 0x0F) == 0)
+                        if ((pSt_TransDataInfo->u8MemArea & 0x0F) == 0)
                         {
                             /* Problem in app Memory Area
                              * Reset indicators */
-                            s_stBootFlag.ucAppMemoryErase = false;
-                            pSt_TransDataInfo->ValidInfo = false;
+                            s_stBootFlag.bAppMemoryErase = false;
+                            pSt_TransDataInfo->bValidInfo = false;
                         }
                         else
                         {
                             /*Problem in Logistic memory Area*/
-                            s_stBootFlag.ucLogMemoryErase = false;
+                            s_stBootFlag.bLogMemoryErase = false;
                         }
                         /* Send error*/
                         SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
@@ -576,7 +577,7 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
                     else
                     {
                         /* No error happened when write flash, send positive ACK, Stop timeout Timer*/
-                        pSt_TransDataInfo->ValidInfo = false;
+                        pSt_TransDataInfo->bValidInfo = false;
                         SendGenericResponse(MEMORY_AREA, NO_ERROR);
                     }
                     ReleaseFlashPump();
@@ -601,7 +602,7 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
 
 static void IdentifyBoot(MyBootSys* Info)
 { //Identify current boot
-    if (boot_even_flag == BootEvenValid)
+    if (boot_even_flag == BOOT_EVEN_VALID)
     {
         Info->BootPolarity              = 0; // current bootloader is Even
         Info->BootValidFlagAddr         = FLAG_BOOT0_ADDRESS;
@@ -610,7 +611,7 @@ static void IdentifyBoot(MyBootSys* Info)
         Info->OppositBootStartAddr      = MEM_BOOT1_START_ADDRESS;
         Info->OppositBootFlagValidAddr  = FLAG_BOOT1_ADDRESS;
         Info->OppositBootEndAddr        = MEM_BOOT1_END_ADDRESS;
-        Info->OppositBootValidCode      = BootOddValid;
+        Info->OppositBootValidCode      = BOOT_ODD_VALID;
     }
     else
     {
@@ -621,17 +622,17 @@ static void IdentifyBoot(MyBootSys* Info)
         Info->OppositBootStartAddr      = MEM_BOOT0_START_ADDRESS;
         Info->OppositBootFlagValidAddr  = FLAG_BOOT0_ADDRESS;
         Info->OppositBootEndAddr        = MEM_BOOT0_END_ADDRESS;
-        Info->OppositBootValidCode      = BootEvenValid;
+        Info->OppositBootValidCode      = BOOT_EVEN_VALID;
     }
 }
 
 static void Init_TransParam(St_TransDataInfo *pTran)
 {
-    pTran->Address      = 0;
-    pTran->BSC          = 0;
-    pTran->MemArea      = 0;
-    pTran->Size         = 0;
-    pTran->ValidInfo    = false;
+    pTran->u32Address       = 0;
+    pTran->u8BSC            = 0;
+    pTran->u8MemArea        = 0;
+    pTran->u16Size          = 0;
+    pTran->bValidInfo       = false;
 }
 
 #if 0
@@ -650,10 +651,10 @@ static uint8_t ReadConfigurationPin(void)
 
 static void Init_BootFlag(void)
 {
-    s_stBootFlag.ucSecurityUnlocked      = false;
-    s_stBootFlag.FlashAuthorization      = false;
-    s_stBootFlag.ucAppMemoryErase        = false;
-    s_stBootFlag.ucLogMemoryErase        = false;
+    s_stBootFlag.bSecurityUnlocked      = false;
+    s_stBootFlag.bFlashAuthorization    = false;
+    s_stBootFlag.bAppMemoryErase        = false;
+    s_stBootFlag.bLogMemoryErase        = false;
 #if 0
     s_u16AddrCfg = ReadConfigurationPin();
 #endif

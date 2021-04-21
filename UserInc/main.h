@@ -28,36 +28,36 @@
 #define UPDATE_APP_RQST                 0xC0DEFEED
 
 
-#define Clr_CanRxFlag()                 CAN_RX_Flag=0
+#define Clr_CanRxFlag()                 g_bCAN_RX_Flag=0
 
 #if defined (__IS_STANDALONE) && defined(__IS_ODD)
 #define VALID_FLAG_ADDR                 FLAG_BOOT1_ADDRESS
 #define MEMORY_END                      MEM_BOOT1_END_ADDRESS
 #define BOOT_PN_ADDRESS                 BOOT1_PN_ADDRESS
-#define BootIsValid                     BootOddValid
-#pragma DATA_SECTION(u40BootVersion,".boot_ver");
+#define BootIsValid                     BOOT_ODD_VALID
+#pragma DATA_SECTION(g_u40BootVersion,".boot_ver");
 /*bootloader SW version, need update this every time update boot SW, otherwise the CMD_SWVersionCheck will failed*/
-const uint16_t u40BootVersion[3] = {0x0101, 0x0301, 0x11FF};
+const uint16_t g_u40BootVersion[3] = {0x0101, 0x0301, 0x11FF};
 
 #else
 #define VALID_FLAG_ADDR                 FLAG_BOOT0_ADDRESS
 #define MEMORY_END                      MEM_BOOT0_END_ADDRESS
 #define BOOT_PN_ADDRESS                 BOOT0_PN_ADDRESS
-#define BootIsValid                     BootEvenValid
-#pragma DATA_SECTION(u40BootVersion,".boot_ver");
+#define BootIsValid                     BOOT_EVEN_VALID
+#pragma DATA_SECTION(g_u40BootVersion,".boot_ver");
 /*bootloader SW version, need update this every time update boot SW, otherwise the CMD_SWVersionCheck will failed*/
-const uint16_t u40BootVersion[3] = {0x0101, 0x0301, 0x00FF};
+const uint16_t g_u40BootVersion[3] = {0x0101, 0x0301, 0x00FF};
 
 #ifndef  __IS_STANDALONE
 #pragma DATA_SECTION(u32BootValid,".boot_valid");
-const uint32_t u32BootValid = BootEvenValid;
+const uint32_t u32BootValid = BOOT_EVEN_VALID;
 /*if it's standalone boot, the Bootvalid flag should be writed by opposite boot CRCWrite()*/
 #endif
 
 #endif
 
-#pragma DATA_SECTION(u32UpdataFlag,".updataflag");
-uint32_t u32UpdataFlag;
+#pragma DATA_SECTION(g_u32UpdataFlag,".updataflag");
+uint32_t g_u32UpdataFlag;
 
 typedef enum {
     State_TRANSITION,

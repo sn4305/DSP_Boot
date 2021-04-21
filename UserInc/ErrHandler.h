@@ -11,6 +11,7 @@
 #include "F28x_Project.h"
 #include "Timer.h"
 #include "cancom.h"
+#include "Interrupt.h"
 //#include "CRC.h"
 //#include "Flash.h"
 #include "inc/hw_can.h"
@@ -56,8 +57,8 @@
 #define MEM_APPCODE_START_ADDRESS       0x88000UL
 #define MEM_APPCODE_END_ADDRESS         0xB7FF8UL
 
-#define BootEvenValid                   0xBA5EBA11UL
-#define BootOddValid                    0xC0DEBA5EUL
+#define BOOT_EVEN_VALID                 0xBA5EBA11UL
+#define BOOT_ODD_VALID                  0xC0DEBA5EUL
 #define APP_VALID                       0xA5C6BD72UL      /* Value of Flag when application is valid*/
 
 #define MEM_PREBOOT_START_ADDRESS       0x80000
@@ -88,7 +89,8 @@ extern pExitBoot exitboot;
 
 #define Read_Data_Word(Addr)            *(uint16_t *)(Addr)
 
-typedef struct {
+typedef struct
+{
     uint8_t BootPolarity;
     uint32_t BootPNAddr;
     uint32_t BootValidFlagAddr;
@@ -101,54 +103,53 @@ typedef struct {
 
 typedef struct
 {
-    uint8_t     SN;                 /* Received TransDataInfo Flag */
-    uint8_t    *pRecvData;           /* data buffer used to receive can flash data and then be copied to flash buffer */
-    uint16_t    RecvDataIdx;        /* data buffer(DataToCopy) index, unit: byte   */
-/*   uint16_t   *pFlashData;           data buffer used to receive can flash data and then be copied to flash buffer */
+    uint8_t     u8SN;                 /* Received TransDataInfo Flag */
+    uint8_t    *pu8RecvData;           /* data buffer used to receive can flash data and then be copied to flash buffer */
+    uint16_t    u16RecvDataIdx;        /* data buffer(DataToCopy) index, unit: byte   */
 }St_TransData;
 
 typedef struct
 {
-    uint8_t         ValidInfo;      /* Received TransDataInfo Flag */
-    uint8_t         MemArea;        /* memory area*/
-    uint8_t         BSC;            /* block sequence counter*/
-    uint32_t        Address;        /* block Memory Address  */
-    uint16_t        Size;           /* block Memory Size,   unit: byte, not include CRC part len */
-    St_TransData   *ptr_St_Data;    /* St_TransData pointer, used to restore received data */
+    bool            bValidInfo;         /* Received TransDataInfo Flag */
+    uint8_t         u8MemArea;          /* memory area*/
+    uint8_t         u8BSC;              /* block sequence counter*/
+    uint32_t        u32Address;         /* block Memory Address  */
+    uint16_t        u16Size;            /* block Memory Size,   unit: byte, not include CRC part len */
+    St_TransData   *pst_Data;        /* St_TransData pointer, used to restore received data */
 }St_TransDataInfo;
 
 typedef struct
 {
-    bool            ucSecurityUnlocked;      /* Security Unlocked Flag, handled in CMD_SecurityAccess */
-    bool            ucAppMemoryErase;        /* Application Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
-    bool            ucLogMemoryErase;        /* Logistic Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
-    bool            FlashAuthorization;      /* Flash Authorization Flag,  updated in State_BOOT state overtime handler and DEFAULT_MODE request handler*/
+    bool            bSecurityUnlocked;      /* Security Unlocked Flag, handled in CMD_SecurityAccess */
+    bool            bAppMemoryErase;        /* Application Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
+    bool            bLogMemoryErase;        /* Logistic Memory Erase Flag, updated in CMD_EraseMemory and TreatData() */
+    bool            bFlashAuthorization;      /* Flash Authorization Flag,  updated in State_BOOT state overtime handler and DEFAULT_MODE request handler*/
 }St_BootFlag, *pSt_BootFlag;
 
-uint8_t IsRequestValid(tCANMsgObject Received_Message);
+uint8_t IsRequestValid(stCanMsgObj Received_Message);
 
-uint8_t IsLogisticValid(tCANMsgObject Received_Message);
+uint8_t IsLogisticValid(stCanMsgObj Received_Message);
 
-uint8_t IsSWVersionCheckValid(tCANMsgObject Received_Message);
+uint8_t IsSWVersionCheckValid(stCanMsgObj Received_Message);
 
-uint8_t IsSecurityValid(tCANMsgObject Received_Message);
+uint8_t IsSecurityValid(stCanMsgObj Received_Message);
 
-uint8_t IsEraseValid(tCANMsgObject Received_Message, bool ucSecurityUnlocked);
+uint8_t IsEraseValid(stCanMsgObj Received_Message, bool ucSecurityUnlocked);
 
-uint8_t IsTransferInfoValid(tCANMsgObject Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag);
+uint8_t IsTransferInfoValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_TransDataInfo, St_BootFlag *stBootFlag);
 
-uint8_t IsTransferDataValid(tCANMsgObject Received_Message, St_TransDataInfo *st_TransDataInfo);
+uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *st_TransDataInfo);
 
-uint8_t IsCRCRequestValid(tCANMsgObject Received_Message);
+uint8_t IsCRCRequestValid(stCanMsgObj Received_Message);
 
 void LogiticRequestHandle(uint8_t Identifier);
 
-void SWVersionComparetHandle(tCANMsgObject Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag);
+void SWVersionComparetHandle(stCanMsgObj Received_Message, MyBootSys *Info, pSt_BootFlag ptr_st_BootFlag);
 
 bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info);
 
-void CRCWrite(tCANMsgObject ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag);
+void CRCWrite(stCanMsgObj ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *stBootFlag);
 
-void LogisticCRCWrite(tCANMsgObject ReceivedMessage);
+void LogisticCRCWrite(stCanMsgObj ReceivedMessage);
 
 #endif /* USERINC_ERRHANDLER_H_ */
