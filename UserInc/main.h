@@ -16,6 +16,8 @@
 #include "Flash.h"
 #include "Timer.h"
 
+#define DEMOBOARD
+
 /* Macro definition */
 #ifdef DEMOBOARD
 #define BLINKY_LED_GPIO                 12      //Red
@@ -27,6 +29,9 @@
 
 #define UPDATE_APP_RQST                 0xC0DEFEED
 
+#define U16_SW_VER_1                    0x0101
+#define U16_SW_VER_2                    0x0301
+#define U16_SW_VER_3                    0x00FF
 
 #define Clr_CanRxFlag()                 g_bCAN_RX_Flag=0
 
@@ -46,7 +51,7 @@ const uint16_t g_u40BootVersion[3] = {0x0101, 0x0301, 0x11FF};
 #define BootIsValid                     BOOT_EVEN_VALID
 #pragma DATA_SECTION(g_u40BootVersion,".boot_ver");
 /*bootloader SW version, need update this every time update boot SW, otherwise the CMD_SWVersionCheck will failed*/
-const uint16_t g_u40BootVersion[3] = {0x0101, 0x0301, 0x00FF};
+const uint16_t g_u40BootVersion[3] = {0x0000, 0x0000, 0x0000};
 
 #ifndef  __IS_STANDALONE
 #pragma DATA_SECTION(u32BootValid,".boot_valid");

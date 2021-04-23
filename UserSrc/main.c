@@ -21,14 +21,14 @@ static BootMachineStates s_stState = State_TRANSITION;
 static MyBootSys s_stBootStatus;
 uint16_t s_u16AddrCfg = 0; //OBC address configuration
 St_BootFlag s_stBootFlag = {false, false, false, false};
-uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
-St_TransData s_stTransData = {0, s_u8RecvBuf, 0};
-St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};
+static uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
+static St_TransData s_stTransData = {0, s_u8RecvBuf, 0};
+static St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};
 
 /* function declaration */
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
-static void IdentifyBoot(MyBootSys* Info);
-static void Init_TransParam(St_TransDataInfo *pTran);
+static void IdentifyBoot(void);
+static void Init_TransParam(void);
 static void Init_BootFlag(void);
 
 /* ******************************************************
@@ -45,9 +45,9 @@ uint32_t main(void)
 {//Pre boot sequence
    if(boot_even_flag == BOOT_EVEN_VALID)
    {
-       if(0x0101 == g_u40BootVersion[0]
-          && 0x0301 == g_u40BootVersion[1]
-          && 0x00FF == g_u40BootVersion[2])
+       if(0x0 == g_u40BootVersion[0]
+          && 0x0 == g_u40BootVersion[1]
+          && 0x0 == g_u40BootVersion[2])
        {
            /* if it is init Boot0, then jump to Mainboot*/
            MainBoot();
@@ -70,8 +70,6 @@ uint32_t main(void)
 
 }
 #endif
-
-
 
 /**
  * main.c
@@ -157,10 +155,9 @@ uint32_t main(void)
 
     ServiceDog();
 
-    s_stState = State_TRANSITION;
     Init_BootFlag();
-    Init_TransParam(&s_stTransDataInfo);
-    IdentifyBoot(&s_stBootStatus);
+    Init_TransParam();
+    IdentifyBoot();
 
     /*  ||========================================================||
     *   ||                 Start of s_stBootStatus Machine                 ||
@@ -257,7 +254,7 @@ uint32_t main(void)
                                 if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
                                 {/* Enter boot mode request : Send positive Response
                                  * No Action*/
-                                    Init_TransParam(&s_stTransDataInfo);
+                                    Init_TransParam();
                                     SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                                 }
                                 else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
@@ -600,39 +597,41 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
     }
 }
 
-static void IdentifyBoot(MyBootSys* Info)
+static void IdentifyBoot(void)
 { //Identify current boot
     if (boot_even_flag == BOOT_EVEN_VALID)
     {
-        Info->BootPolarity              = 0; // current bootloader is Even
-        Info->BootValidFlagAddr         = FLAG_BOOT0_ADDRESS;
-        Info->BootPNAddr                = BOOT0_PN_ADDRESS;
-        Info->OppositBootCRCAddr        = BOOT1_CRC_ADDRESS;
-        Info->OppositBootStartAddr      = MEM_BOOT1_START_ADDRESS;
-        Info->OppositBootFlagValidAddr  = FLAG_BOOT1_ADDRESS;
-        Info->OppositBootEndAddr        = MEM_BOOT1_END_ADDRESS;
-        Info->OppositBootValidCode      = BOOT_ODD_VALID;
+        s_stBootStatus.BootPolarity              = 0; // current bootloader is Even
+        s_stBootStatus.BootValidFlagAddr         = FLAG_BOOT0_ADDRESS;
+        s_stBootStatus.BootPNAddr                = BOOT0_PN_ADDRESS;
+        s_stBootStatus.OppositBootCRCAddr        = BOOT1_CRC_ADDRESS;
+        s_stBootStatus.OppositBootStartAddr      = MEM_BOOT1_START_ADDRESS;
+        s_stBootStatus.OppositBootFlagValidAddr  = FLAG_BOOT1_ADDRESS;
+        s_stBootStatus.OppositBootEndAddr        = MEM_BOOT1_END_ADDRESS;
+        s_stBootStatus.OppositBootValidCode      = BOOT_ODD_VALID;
     }
     else
     {
-        Info->BootPolarity              = 1; // current bootloader is Odd
-        Info->BootValidFlagAddr         = FLAG_BOOT1_ADDRESS;
-        Info->BootPNAddr                = BOOT1_PN_ADDRESS;
-        Info->OppositBootCRCAddr        = BOOT0_CRC_ADDRESS;
-        Info->OppositBootStartAddr      = MEM_BOOT0_START_ADDRESS;
-        Info->OppositBootFlagValidAddr  = FLAG_BOOT0_ADDRESS;
-        Info->OppositBootEndAddr        = MEM_BOOT0_END_ADDRESS;
-        Info->OppositBootValidCode      = BOOT_EVEN_VALID;
+        s_stBootStatus.BootPolarity              = 1; // current bootloader is Odd
+        s_stBootStatus.BootValidFlagAddr         = FLAG_BOOT1_ADDRESS;
+        s_stBootStatus.BootPNAddr                = BOOT1_PN_ADDRESS;
+        s_stBootStatus.OppositBootCRCAddr        = BOOT0_CRC_ADDRESS;
+        s_stBootStatus.OppositBootStartAddr      = MEM_BOOT0_START_ADDRESS;
+        s_stBootStatus.OppositBootFlagValidAddr  = FLAG_BOOT0_ADDRESS;
+        s_stBootStatus.OppositBootEndAddr        = MEM_BOOT0_END_ADDRESS;
+        s_stBootStatus.OppositBootValidCode      = BOOT_EVEN_VALID;
     }
 }
 
-static void Init_TransParam(St_TransDataInfo *pTran)
+static void Init_TransParam(void)
 {
-    pTran->u32Address       = 0;
-    pTran->u8BSC            = 0;
-    pTran->u8MemArea        = 0;
-    pTran->u16Size          = 0;
-    pTran->bValidInfo       = false;
+    s_stTransDataInfo.u32Address        = 0;
+    s_stTransDataInfo.u8BSC             = 0;
+    s_stTransDataInfo.u8MemArea         = 0;
+    s_stTransDataInfo.u16Size           = 0;
+    s_stTransDataInfo.bValidInfo        = false;
+    s_stTransData.u16RecvDataIdx        = 0;
+    s_stTransData.u8SN                  = 0;
 }
 
 #if 0
