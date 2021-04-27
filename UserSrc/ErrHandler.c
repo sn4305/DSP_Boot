@@ -1,7 +1,7 @@
-/*
- * ErrHandler.c
+/**
+ * @file ErrHandler.c
  *
- *  Created on: 2021Äê3ÔÂ2ÈÕ
+ *  Created on: 20210302
  *      Author: E9981231
  */
 
@@ -15,8 +15,15 @@ extern uint16_t WriteFlash(uint32_t Address, uint16_t* Data, uint16_t len);
 extern uint16_t SwitchBank(uint16_t BankIdx);
 extern int prv_Sector_Erase(uint32_t sectors);
 
+/** exitboot function pointer point the fix address 0x81000 which is defined in .cmd file*/
 pExitBoot exitboot = (pExitBoot)EXIT_FUNC_ADDR;
 
+/**
+* Get address and size from CMD_TransferInformation. Be called in IsTransferInfoValid().
+*
+* @param Received_Message pointer of received message.
+* @param pSt_TransDataInfo pointer of transfer data information struct.
+*********************************************************/
 static void GetInformation(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     /* Start of data write : reception of address and length */
@@ -182,7 +189,7 @@ uint8_t IsTransferInfoValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_
     return error;
 }
 
-uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *st_TransDataInfo)
+uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pu8MsgData);
@@ -195,27 +202,27 @@ uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *st_T
         return error;
     }
 
-    if(NULL == st_TransDataInfo)
+    if(NULL == pSt_TransDataInfo)
     {
         return error;
     }
 
-    if(!(st_TransDataInfo->bValidInfo))
+    if(!(pSt_TransDataInfo->bValidInfo))
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(data0 == (st_TransDataInfo->pst_Data->u8SN - 1))
+    else if(data0 == (pSt_TransDataInfo->pst_Data->u8SN - 1))
     {
         /* Same sequence number as previous frame: ignore the frame*/
         error = SAME_SN;
     }
-    else if(data0 != (st_TransDataInfo->pst_Data->u8SN + 1) || data0 > MAX_SN)
+    else if(data0 != (pSt_TransDataInfo->pst_Data->u8SN + 1) || data0 > MAX_SN)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(((st_TransDataInfo->u8MemArea & 0x0F) == 0 || (st_TransDataInfo->u8MemArea & 0x0F) == 4) && Received_Message.u16MsgLen != 8)
+    else if(((pSt_TransDataInfo->u8MemArea & 0x0F) == 0 || (pSt_TransDataInfo->u8MemArea & 0x0F) == 4) && Received_Message.u16MsgLen != 8)
     {
-        if((st_TransDataInfo->pst_Data->u16RecvDataIdx + Received_Message.u16MsgLen - CRC_LENGTH - 1) == st_TransDataInfo->u16Size)
+        if((pSt_TransDataInfo->pst_Data->u16RecvDataIdx + Received_Message.u16MsgLen - CRC_LENGTH - 1) == pSt_TransDataInfo->u16Size)
         {
             error = NO_ERROR;
         }

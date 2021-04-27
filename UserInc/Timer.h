@@ -1,7 +1,7 @@
-/*
- * Timer.h
+/**
+ * @file Timer.h
  *
- *  Created on: 2021Äê3ÔÂ1ÈÕ
+ *  Created on: 20210301
  *      Author: E9981231
  */
 
@@ -10,17 +10,27 @@
 
 #include "F28x_Project.h"
 
+/** Timer object. */
 typedef struct _TMR_OBJ_STRUCT
 {
-    /* Timer Elapsed */
+    /** Timer Elapsed */
     bool         Start_Flag;
-    /*Software Counter value*/
+    /** Software Counter value*/
     uint16_t     count;
-
 } TMR_OBJ;
 
+/** Initiate Timer. Include clock, Timer INT, ISR.
+ * Be called in MainBoot.
+* @see MainBoot()
+*********************************************************/
 void Init_Timer(void);
+
+/** Get system tick.
+* @return Tick value.
+*********************************************************/
 uint16_t Get_SysTick(void);
+
+/** Clear system tick.*/
 void Clr_SysTick(void);
 
 void TMR1_Start(void);

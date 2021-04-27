@@ -1,20 +1,20 @@
-/*
- * Timer.c
+/**
+ * @file Timer.c
  *
- *  Created on: 2021Äê3ÔÂ1ÈÕ
+ *  Created on: 20210301
  *      Author: E9981231
  */
 
 #include "Timer.h"
 #include "F28x_Project.h"
 
-/* defined in interrupt.c */
+/** defined in interrupt.c */
 extern volatile uint16_t u16Tick;
 extern __interrupt void cpu_timer0_isr(void);
 
-/* used for 5s boot overtime */
+/** used for 5s boot overtime */
 TMR_OBJ tmr1_obj;
-/* used for transData and flash overtime */
+/** used for transData and flash overtime */
 TMR_OBJ tmr2_obj;
 
 static void EnableDog(void);

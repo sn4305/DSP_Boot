@@ -1,7 +1,7 @@
 //###########################################################################
 //
-// FILE:    flash_programming_C28.h
-//
+//! @file    flash_programming_C28.h
+// TI Flash API
 //###########################################################################
 // $TI Release: F2837xS Support Library v3.05.00.00 $
 // $Release Date: Thu Oct 18 15:50:26 CDT 2018 $

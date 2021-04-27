@@ -1,7 +1,7 @@
-/*
- * Flash.c
+/**
+ * @file Flash.c
  *
- *  Created on: 2021Äê3ÔÂ1ÈÕ
+ *  Created on: 20210301
  *      Author: E9981231
  */
 #include "Flash.h"
@@ -44,9 +44,7 @@ static const Uint32 sectAddress[FLASH_SECTOR_NUM] =
  Bzero_SectorAB_start,
 };
 
-//
-// Example_Error - Error function that will halt debugger
-//
+/** Example_Error - Error function that will halt debugger */
 #pragma CODE_SECTION(Example_Error,".TI.ramfunc");
 void Example_Error(Fapi_StatusType status)
 {
@@ -133,7 +131,7 @@ uint16_t SwitchBank(uint16_t BankIdx)
     return Err_Cnt;
 }
 
-/* Clear HW info inside flag sector, this will keep App valid flag*/
+/** Clear HW info inside flag sector, this will keep App valid flag*/
 #pragma CODE_SECTION(prv_EraseLogisticFlash,".TI.ramfunc");
 static void prv_EraseLogisticFlash(void)
 {
@@ -178,7 +176,7 @@ static void prv_EraseLogisticFlash(void)
     EDIS;
 }
 
-/* Clear Application Valid Flag inside flag sector, this will keep HW info*/
+/** Clear Application Valid Flag inside flag sector, this will keep HW info*/
 #pragma CODE_SECTION(prv_ClearAppFlag,".TI.ramfunc");
 static uint16_t prv_ClearAppFlag(void)
 {
@@ -231,10 +229,10 @@ static uint16_t prv_ClearAppFlag(void)
     return fail;
 }
 
-/* Flash Sector Erase
- * param:
- *  sectors: bit0 refers to sector A, bit1 refers to sector B
- *  if bitx == 1, means erase corresponded sector*/
+/** Flash Sector Erase
+ * param[in]
+ *   sectors bit0 refers to sector A, bit1 refers to sector B and so on,
+ *  if bitx == 1, means erase corresponded sector */
 #pragma CODE_SECTION(prv_Sector_Erase,".TI.ramfunc");
 int prv_Sector_Erase(uint32_t sectors)
 {

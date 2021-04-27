@@ -1,7 +1,7 @@
-/*
- * can.h
+/**
+ * @file cancom.h
  *
- *  Created on: 2021Äê2ÔÂ26ÈÕ
+ *  Created on: 20210226
  *      Author: E9981231
  */
 
@@ -17,26 +17,26 @@
 
 //#define DEMOBOARD
 
-#define GENERAL_RESP      0xCEF01A0
-#define LOGI_RESP         0xCEF02A0
-#define DIAG_SESSION      0xCFF03A0
+/** CAN Id */
+#define GENERAL_RESP      0xCEF01A0                     /**< General response CAN ID*/
+#define LOGI_RESP         0xCEF02A0                     /**< Logistic response CAN ID*/
+#define DIAG_SESSION      0xCFF03A0                     /**< Diagnostic response CAN ID*/
 
-/* CAN Id */
-#define EraseMemory                    0x4E0FF01
-#define TransferInformation            0x4E1FF01
-#define TransferData                   0x4E2FF01
-#define CRCRequest                     0x4E3FF01
-#define SecurityAccess                 0x4E4FF01
-#define LogisticRequest                0x4E5FF01
-#define SWVersionCheck                 0x4E6FF01
+#define EraseMemory                    0x4E0FF01        /**< EraseMemory command CAN ID*/
+#define TransferInformation            0x4E1FF01        /**< TransferInformation command CAN ID*/
+#define TransferData                   0x4E2FF01        /**< TransferData command CAN ID*/
+#define CRCRequest                     0x4E3FF01        /**< CRCRequest command CAN ID*/
+#define SecurityAccess                 0x4E4FF01        /**< SecurityAccess command CAN ID*/
+#define LogisticRequest                0x4E5FF01        /**< LogisticRequest command CAN ID*/
+#define SWVersionCheck                 0x4E6FF01        /**< SWVersionCheck command CAN ID*/
 
 #ifdef DCDC
 #define ModeRequest                    0x4D3FF01   /* Receivec CAN ID for mode request for DCDC*/
 #else
-#define ModeRequest                    0x4D0FF01   /* Receivec CAN ID for mode request for OBC*/
+#define ModeRequest                    0x4D0FF01        /**< Received CAN ID for OBC mode request*/
 #endif
 
-/* CAN mail box ID */
+/** CAN mail box ID */
 #define ID_RX_OBJ_START                1
 #define ID_RX_ModeRequest              1
 #define ID_RX_LogisticRequest          2
@@ -55,10 +55,11 @@
 #define ID_TX_OBJ_END                  18
 
 /* Mode definition*/
-#define DEFAULT_MODE                   6            /* Used for goto default mode*/
-#define BOOT_MODE                      5            /* Used for goto Boot mode*/
-#define DIAGNOSTICSESSION              3            /* Used for goto Diagnostic session*/
+#define DEFAULT_MODE                   6            /**< Used for goto default mode*/
+#define BOOT_MODE                      5            /**< Used for goto Boot mode*/
+#define DIAGNOSTICSESSION              3            /**< Used for goto Diagnostic session*/
 
+/** Enum used to Indicate subsystem state of Boot. */
 typedef enum {
     CMD_ModeRequest,
     CMD_LogisticRequest,
@@ -71,11 +72,47 @@ typedef enum {
 } CAN_CMD;
 
 
-extern tCANMsgObject g_stRXCANMessage; /*global CAN message buffer used in interrupt.c to receive temporal message*/
+extern tCANMsgObject g_stRXCANMessage;              /**< Global CAN message buffer used in interrupt.c to receive temporal message */
 
+/** Initiate CAN A. Include GPIO, clock, CAN INT, CAN mail box configuration.
+ * Be called in MainBoot.
+*
+* @see MainBoot()
+*********************************************************/
 void InitCana(void);
+
+/** Send Diagnostic Response from CANa.
+*  Calls:          Main() state machine  @see main()
+*  @param[in] MemoryArea
+*            0x20: OBC Application,
+*            0x21: OBC HW Version,
+*            0x22: HW_SERIAL_NUMBER,
+*            0x24: OBC Bootloader.
+*  @param[in] Config MODE code.
+*************************************************/
 void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config);
+
+/** Send Generic Response from CANa.
+*  Calls:          Main() state machine @see main()
+*  @param[in] MemoryArea
+*            0x20: OBC Application,
+*            0x21: OBC HW Version,
+*            0x22: HW_SERIAL_NUMBER,
+*            0x24: OBC Bootloader.
+*  @param[in] error error code.
+*************************************************/
 void SendGenericResponse(uint8_t MemoryArea, uint8_t error);
+
+/** Send Logistic Response from CANa.
+*  Calls:          Main() state machine @see main()
+*  @param[in] MemoryArea
+*            0x20: OBC Application,
+*            0x21: OBC HW Version,
+*            0x22: HW_SERIAL_NUMBER,
+*            0x24: OBC Bootloader.
+*  @param[in] Config configuration data buffer head point.
+*  @param[in] DataSize configuration data buffer size.
+*************************************************/
 void SendLogisticResponse(uint8_t MemoryArea, uint8_t* Config, uint8_t DataSize);
 
 #endif /* USERINC_CANCOM_H_ */

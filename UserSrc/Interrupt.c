@@ -1,18 +1,18 @@
-/*
- * Interrupt.c
+/**
+ * @file Interrupt.c
  *
- *  Created on: 2021Äê3ÔÂ1ÈÕ
+ *  Created on: 20210301
  *      Author: E9981231
  */
 
 #include <Interrupt.h>
 
 
-/* global variable, only be modified in CAN rx interrupt function and Timer.c */
+/** global variable, only be modified in CAN rx interrupt function and Timer.c */
 volatile uint16_t u16Tick = 0;
 extern TMR_OBJ tmr1_obj, tmr2_obj;
 
-/* global variable, only be modified in CAN rx interrupt function, and read by main state machine */
+/** global variable, only be modified in CAN rx interrupt function, and read by main state machine */
 volatile bool g_bCAN_RX_Flag = 0;
 volatile CAN_CMD g_enumCAN_Command = CMD_ModeRequest;
 volatile uint16_t  g_u16CANerrFlag = 0;

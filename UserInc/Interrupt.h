@@ -1,7 +1,7 @@
-/*
- * interrupt.h
+/**
+ * @file interrupt.h
  *
- *  Created on: 2021Äê3ÔÂ1ÈÕ
+ *  Created on: 20210301
  *      Author: E9981231
  */
 
@@ -12,6 +12,7 @@
 #include "cancom.h"
 #include "Timer.h"
 
+/** Object used to restore CAN frame */
 typedef struct
 {
     //! The CAN message identifier used for 11 or 29 bit identifiers.
@@ -27,9 +28,13 @@ typedef struct
 
 extern volatile bool g_bCAN_RX_Flag;
 extern volatile CAN_CMD g_enumCAN_Command;
-extern volatile stCanMsgObj g_stRXCANMsg;  /*global CAN message used in main.c*/
+/* global CAN message object used to restore temporal CAN frame from canaISR() and read by MainBoot()*/
+extern volatile stCanMsgObj g_stRXCANMsg;
 
+/** Timer0 interrupt server routine*/
 __interrupt void cpu_timer0_isr(void);
+
+/** Can A interrupt server routine*/
 __interrupt void canaISR(void);
 
 

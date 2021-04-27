@@ -1,7 +1,7 @@
-/*
- * can.c
+/**
+ * @file cancom.c
  *
- *  Created on: 2021Äê2ÔÂ26ÈÕ
+ *  Created on: 20210226
  *      Author: E9981231
  */
 
@@ -13,12 +13,12 @@
 void InitCanaGpio(void);
 void InitCanaMbox(void);
 
-static unsigned char s_u8txMsgData[8];
-static unsigned char s_u8rxMsgData[8];
-tCANMsgObject s_stTXCANMessage;
-tCANMsgObject g_stRXCANMessage;
+static unsigned char s_u8txMsgData[8];      /**< CAN transmit buffer*/
+static unsigned char s_u8rxMsgData[8];      /**< CAN receive buffer*/
+tCANMsgObject s_stTXCANMessage;             /**< CAN transmit object*/
+tCANMsgObject g_stRXCANMessage;             /**< CAN receive object*/
 
-extern __interrupt void canaISR(void);
+extern __interrupt void canaISR(void);      /**< Defined in interrupt.c*/
 
 void InitCana(void)
 {
@@ -61,6 +61,11 @@ void InitCana(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
 }
 
+/**
+*  Configure CANa GPIO.
+*  GPIO70 -  CANRXA; GPIO71 - CANTXA.
+*  Calls: InitCana()
+*************************************************/
 void InitCanaGpio(void)
 {
     GPIO_SetupPinMux(70, GPIO_MUX_CPU1, 5); /*GPIO70 -  CANRXA*/
@@ -116,22 +121,6 @@ void InitCanaMbox(void)
     s_stTXCANMessage.pucMsgData = s_u8txMsgData;
 }
 
-/*************************************************
-*  Function:       SendDiagnosticResponse
-*  Description:    Send Diagnostic Response from CANa
-*  Calls:          Main() state machine
-*  Input:
-        @param[in] MemoryArea:
-            0x20: OBC Application,
-            0x21: OBC HW Version,
-            0x22: HW_SERIAL_NUMBER,
-            0x24: OBC Bootloader;
-        @param[in] Config: MODE code;
-*  Output:           None
-*  Quoted Variable:  None
-*  Modified Variable: s_u8txMsgData
-*  Return:           None
-*************************************************/
 void SendDiagnosticResponse(uint8_t MemoryArea, uint8_t Config)
 {
     s_stTXCANMessage.ui32MsgID = DIAG_SESSION;

@@ -1,23 +1,11 @@
-/*******************************************************************
-File name:   <CRC.c>
-Purpose :    <CRC verification>
-Copyright Notice:
-All source code and data contained in this file is Proprietary and
-Confidential to Eaton, and must not be reproduced, transmitted, or
-disclosed; in whole or in part, without the express written permission of Eaton.
-Copyright 2011 - Eaton, All Rights Reserved.
-
-Author              Date               Ver#        Description (CR#)
-Dongdong Yang       20210309           00          Init
- append log after baseline, especially for milestone or release version, no log is allowed for minor modification
-******************************************************************
-(***).
+/**
+* @file    CRC.c
+* @brief CRC verification.
 */
 
 
 #include "CRC.h"
 #include "Flash.h"
-//#include "error_handling.h"
 
 static const uint16_t KermitTable[256]=
 {
@@ -55,10 +43,9 @@ static const uint16_t KermitTable[256]=
   0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-/******************************************************************************
- *    Function:          UpdateCrcKermit
+/**
  *    Description:       Calculate CRC Kermit of value with Init_Value
- *    Return Value:      Calculated CRC16
+ *    @return      Calculated CRC16
  ******************************************************************************/
 #pragma CODE_SECTION(UpdateCrcKermit,".TI.ramfunc");
 uint16_t UpdateCrcKermit(uint16_t Init_Value, uint8_t value)
@@ -72,7 +59,6 @@ uint16_t UpdateCrcKermit(uint16_t Init_Value, uint8_t value)
   return Init_Value;
 }
 
-/*****CRC calculation for big data with length********/
 #pragma CODE_SECTION(CRC16,".TI.ramfunc");
 uint16_t CRC16(uint16_t reg_init, uint16_t *data, uint16_t len)
 {

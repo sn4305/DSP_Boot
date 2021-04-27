@@ -1,29 +1,41 @@
-/*******************************************************************
-File name:   <main.c>
-Purpose :    <main file>
-Copyright Notice:
-All source code and data contained in this file is Proprietary and
-Confidential to Eaton, and must not be reproduced, transmitted, or
-disclosed; in whole or in part, without the express written permission of Eaton.
-Copyright 2011 - Eaton, All Rights Reserved.
-
-Author              Date               Ver#        Description (CR#)
-Dongdong Yang       20210225           00          Init for Base project 2nd DSP(28377s) Bootloader
-Dongdong Yang       20210413           01          Optimize code according to coding guideline V1.1
-Dongdong Yang       20210421           02          Optimize variable name according to coding guideline V1.1
-******************************************************************
-(***).
+/**
+* @file   main.c
+* @brief Last Modified in 20210427.
 */
+
+/**
+* \mainpage Bootloader
+* \section intro_sec Introduction
+* This bootloader is developed for CNH C sample.
+* HW platform: TI DSP TMS320f28377s, secondary DSP, this bootloader communicate with gateway via internal CAN BUS.
+* Communication Interface: CAN, speed: 500k.
+*
+* <A HREF="http://172.18.121.26/svn/eMobility/eM-C001/Firmware/Base2CNH/DSP/SecondaryDSP/Bootloader/Trunk">Project SVN path</a>
+*
+* \section Copyright_sec Copyright Notice
+* All source code and data contained in this file is Proprietary and
+* Confidential to Eaton, and must not be reproduced, transmitted, or
+* disclosed; in whole or in part, without the express written permission of Eaton.
+* Copyright 2021 - Eaton, All Rights Reserved.
+*
+*\section His_sec History
+* Author      |        Date          |     Ver#    |    Description (CR#)
+* ----------- | -------------------- | ----------- | -------------------------------------------------------------
+* Dongdong Yang    |   20210225      |     00      |    Init for Base project 2nd DSP(28377s) Bootloader.
+* Dongdong Yang    |   20210413      |     01      |    Optimize code according to coding guideline V1.1.
+* Dongdong Yang    |   20210421      |     02      |    Optimize variable name according to coding guideline V1.1.
+* Dongdong Yang    |   20210427      |     03      |    Added comments according to doxygen document rules.
+*******************************************************************/
 
 #include "main.h"
 
-static BootMachineStates s_stState = State_TRANSITION;
-static MyBootSys s_stBootStatus;
-uint16_t s_u16AddrCfg = 0; //OBC address configuration
-St_BootFlag s_stBootFlag = {false, false, false, false};
-static uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};
-static St_TransData s_stTransData = {0, s_u8RecvBuf, 0};
-static St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};
+static BootMachineStates s_stState = State_TRANSITION;              /**< Boot StateMachine state */
+static MyBootSys s_stBootStatus;                                    /**< Boot informations: polarity, self info, oppsite info */
+uint16_t s_u16AddrCfg = 0;                                          /**< OBC address configuration, not used now */
+St_BootFlag s_stBootFlag = {false, false, false, false};            /**< state flag of boot */
+static uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};      /**< Data block receive buffer, used to receive data from CAN and copy to flash*/
+static St_TransData s_stTransData = {0, s_u8RecvBuf, 0};            /**< Data struct used in CMD_TransferData*/
+static St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};       /**< Data struct used in CMD_TransferInformation*/
 
 /* function declaration */
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
@@ -31,15 +43,21 @@ static void IdentifyBoot(void);
 static void Init_TransParam(void);
 static void Init_BootFlag(void);
 
-/* ******************************************************
-  ##define global Macro in different project build configuration
- *Open CCS project propeties->Build->C2000 Compiler->predefined Symbols;
- *Add macro in Pre-define NAME;
+/********************************************************
+*   @brief define global Macro in different project build configuration
+*  *Open CCS project propeties->Build->C2000 Compiler->predefined Symbols;
+*  *Add macro in Pre-define NAME;
 *********************************************************/
 #ifndef __IS_STANDALONE
 /* function declaration */
 uint32_t MainBoot(void);
 
+/**
+* Preboot main function.
+*
+* First Bootloader software function entry point, branch to Boot0 or Boot1
+* according to Boot area valid flag value.
+*********************************************************/
 #pragma CODE_SECTION(main,".preboot");
 uint32_t main(void)
 {//Pre boot sequence
@@ -72,7 +90,10 @@ uint32_t main(void)
 #endif
 
 /**
- * main.c
+ * Bootloader main function.
+ *
+ * In system build configuration it is MainBoot;
+ * In standalone build configuration it is main function for boot0 or boot1.
  */
 #ifndef __IS_STANDALONE
 uint32_t MainBoot(void)
@@ -504,6 +525,14 @@ uint32_t main(void)
 
 }
 
+/**
+* Treat received CAN message data frame. Be called in CMD_TransferData,
+* it will parse TP and copy data to data buffer. Every time when data block
+* is full, it will calculate block CRC, and will write block data into flash if CRC verification passed.
+*
+* @param Received_Message pointer of received message.
+* @param pSt_TransDataInfo pointer of transfer data information struct.
+*********************************************************/
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     int i, j;
@@ -597,6 +626,9 @@ static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_
     }
 }
 
+/**
+ * Identify Boot location, be called at every reset cycle.
+ */
 static void IdentifyBoot(void)
 { //Identify current boot
     if (boot_even_flag == BOOT_EVEN_VALID)
@@ -623,6 +655,9 @@ static void IdentifyBoot(void)
     }
 }
 
+/**
+ * Initiate transfer data struct, be called at start or when data transfer break.
+ */
 static void Init_TransParam(void)
 {
     s_stTransDataInfo.u32Address        = 0;
@@ -648,6 +683,9 @@ static uint8_t ReadConfigurationPin(void)
 }
 #endif
 
+/**
+ * Initiate Boot flag struct, be called at start or when data transfer break.
+ */
 static void Init_BootFlag(void)
 {
     s_stBootFlag.bSecurityUnlocked      = false;
