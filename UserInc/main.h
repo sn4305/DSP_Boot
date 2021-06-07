@@ -18,7 +18,7 @@
 #include "Flash.h"
 #include "Timer.h"
 
-#define DEMOBOARD
+//#define DEMOBOARD
 
 /* Macro definition */
 #ifdef DEMOBOARD

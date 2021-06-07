@@ -54,7 +54,7 @@ using std::memcpy;
 #endif
 
 #define _FLASH
-#define _LAUNCHXL_F28377S
+//#define _LAUNCHXL_F28377S
 
 #define STATUS_FAIL          0
 #define STATUS_SUCCESS       1

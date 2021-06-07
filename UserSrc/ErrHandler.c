@@ -552,9 +552,10 @@ void CRCWrite(stCanMsgObj ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *s
             ServiceDog();
         }
         stBootFlag->bAppMemoryErase = false;
-        DisableDog();
-        DELAY_US(200000L);
-        RESET();
+//        DisableDog();
+//        DELAY_US(200000L);
+        DEADLOOP();     /**< use dead loop trigger watch dog reset*/
+        RESET();        /**< will never go to here*/
     }
     else
     {

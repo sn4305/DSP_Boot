@@ -80,6 +80,7 @@ extern pExitBoot exitboot;
 #define StartApplication()              exitboot(MEM_APPCODE_START_ADDRESS)
 /** GOTO start address of PreBootloader area*/
 #define RESET()                         exitboot(MEM_PREBOOT_START_ADDRESS)
+#define DEADLOOP()                      while(1)
 /** GOTO start address of Bootloader0 area*/
 #define StartBootEven()                 exitboot(MEM_BOOT0_START_ADDRESS)
 /** GOTO start address of Bootloader1 area*/

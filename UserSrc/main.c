@@ -248,9 +248,10 @@ uint32_t main(void)
                     g_u32UpdataFlag = 0;
                     Init_BootFlag();
                     TMR1_SoftwareCounterClear();
-                    DisableDog();
-                    DELAY_US(200000L);
-                    RESET();
+//                    DisableDog();
+//                    DELAY_US(200000L);
+                    DEADLOOP();     /**< use dead loop trigger watch dog reset*/
+                    RESET();        /**< will never go to here*/
                 }
 
                 ServiceDog();
@@ -283,9 +284,10 @@ uint32_t main(void)
                                     /* Reset to preboot*/
                                     g_u32UpdataFlag = 0;
                                     Init_BootFlag();
-                                    DisableDog();
-                                    DELAY_US(200000L);
-                                    RESET();
+//                                    DisableDog();
+//                                    DELAY_US(200000L);
+                                    DEADLOOP();     /**< use dead loop trigger watch dog reset*/
+                                    RESET();        /**< will never go to here*/
                                 }
                                 else
                                 {
@@ -530,15 +532,15 @@ uint32_t main(void)
 * it will parse TP and copy data to data buffer. Every time when data block
 * is full, it will calculate block CRC, and will write block data into flash if CRC verification passed.
 *
-* @param Received_Message pointer of received message.
-* @param pSt_TransDataInfo pointer of transfer data information struct.
+* @param[in] Received_Message pointer of received message.
+* @param[in] pSt_TransDataInfo pointer of transfer data information struct.
 *********************************************************/
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo)
 {
     int i, j;
     uint16_t DataToFlash[FLASH_WORDS_PER_ROW];
 
-    /* Extract data from received frame*/
+    /** Extract data from received frame*/
     for(j = 1; j < 8; j++)
     {
         if(pSt_TransDataInfo->pst_Data->u16RecvDataIdx < pSt_TransDataInfo->u16Size + CRC_LENGTH)
