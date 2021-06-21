@@ -195,6 +195,7 @@ void InitPeripheralClocks(void)
 {
     EALLOW;
 
+    ClkCfgRegs.LOSPCP.all       = 0x00000007;   // Low Speed Periperal Clock  = 200M/14
     CpuSysRegs.PCLKCR0.bit.CLA1 = 1;
     CpuSysRegs.PCLKCR0.bit.DMA = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;

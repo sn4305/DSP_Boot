@@ -33,6 +33,11 @@ uint16_t Get_SysTick(void);
 /** Clear system tick.*/
 void Clr_SysTick(void);
 
+void TMR0_Start(void);
+void TMR0_Stop(void);
+void TMR0_SoftwareCounterClear(void);
+uint16_t TMR0_SoftwareCounterGet(void);
+
 void TMR1_Start(void);
 void TMR1_Stop(void);
 void TMR1_SoftwareCounterClear(void);

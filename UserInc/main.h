@@ -14,9 +14,11 @@
 #include <string.h>
 #include "F28x_Project.h"
 #include "cancom.h"
+#include "scicom.h"
 #include "CRC.h"
 #include "Flash.h"
 #include "Timer.h"
+#include <SciStack/APL/SCI_APL.h>
 
 //#define DEMOBOARD
 
@@ -42,6 +44,11 @@
  * \def UPDATE_APP_RQST
  * \brief Update application request flag, constant value.
  ******************************************************************/
+#define UPDATE_APP_RQST                 0xC0DEFEED
+
+#define BOOT_DELAY                      200U        /**< delay 200ms then jump to Application*/
+#define BOOT_TIMEOUT                    5000U        /**< wait 5s if no cmd from gateway in boot mode*/
+
 #define UPDATE_APP_RQST                 0xC0DEFEED
 
 #define U16_SW_VER_1                    0x0101

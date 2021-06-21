@@ -151,13 +151,13 @@ static void prv_EraseLogisticFlash(void)
     if(oReturnCheck != Fapi_Status_Success)
     {
         /* Error while erasing*/
-        SendGenericResponse(MEMORY_AREA, MEMORY_NOT_BLANK);
+        SendGenericResponse(SECD_MEMORY_AREA, MEMORY_NOT_BLANK);
     }
     else
     {
         /* No Error, send positive response*/
         s_stBootFlag.bLogMemoryErase = true;
-        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+        SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
     /*Write back AppValid flag, program 4 words at once, 64-bits */
@@ -170,7 +170,7 @@ static void prv_EraseLogisticFlash(void)
     while(Fapi_checkFsmForReady() == Fapi_Status_FsmBusy) ;
     if(oReturnCheck != Fapi_Status_Success)
     {
-        //            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+        //            SendGenericResponse(SECD_MEMORY_AREA, WRITING_INVALID);
     }
     ReleaseFlashPump();
     EDIS;
@@ -211,7 +211,7 @@ static uint16_t prv_ClearAppFlag(void)
     if(oReturnCheck != Fapi_Status_Success)
     {
         /* Error while erasing*/
-        SendGenericResponse(MEMORY_AREA, MEMORY_NOT_BLANK);
+        SendGenericResponse(SECD_MEMORY_AREA, MEMORY_NOT_BLANK);
         fail = 1;
     }
     else
@@ -219,7 +219,7 @@ static uint16_t prv_ClearAppFlag(void)
         /* No Error, send positive response*/
         s_stBootFlag.bLogMemoryErase = true;
         fail = 0;
-//        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+//        SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
     } /* if Error erasing*/
 
     fail += WriteFlash(FLAG_APPLI_ADDRESS, Flag.data, FLAG_TOTAL_LEN);
@@ -255,7 +255,7 @@ int prv_Sector_Erase(uint32_t sectors)
             {
                 if(fail == 0) //first fail
                 {
-//                    SendGenericResponse(MEMORY_AREA, MEMORY_NOT_BLANK);
+//                    SendGenericResponse(SECD_MEMORY_AREA, MEMORY_NOT_BLANK);
                 }
                 fail++;
             }
@@ -311,13 +311,13 @@ void EraseFlash(uint8_t MemoryArea, MyBootSys Info, pSt_BootFlag ptr_st_BootFlag
             if(Erase_Err)
             {
                 /* Send error message*/
-                SendGenericResponse(MEMORY_AREA, MEMORY_NOT_BLANK);
+                SendGenericResponse(SECD_MEMORY_AREA, MEMORY_NOT_BLANK);
             }
             else
             {
                 /*Send OK*/
                 ptr_st_BootFlag->bAppMemoryErase = true;
-                SendGenericResponse(MEMORY_AREA, NO_ERROR);
+                SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
             }
             ReleaseFlashPump();
 

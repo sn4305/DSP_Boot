@@ -12,6 +12,8 @@
 extern volatile uint16_t u16Tick;
 extern __interrupt void cpu_timer0_isr(void);
 
+/** used for SCI overtime */
+TMR_OBJ tmr0_obj;
 /** used for 5s boot overtime */
 TMR_OBJ tmr1_obj;
 /** used for transData and flash overtime */
@@ -33,10 +35,10 @@ void Init_Timer(void)
     InitCpuTimers();
 
     //
-    // Configure CPU-Timer 0 to interrupt every 10ms:
-    // 200MHz CPU Freq, 10ms period.
+    // Configure CPU-Timer 0 to interrupt every 1ms:
+    // 200MHz CPU Freq, 1ms period.
     //
-    ConfigCpuTimer(&CpuTimer0, 200, 10000);
+    ConfigCpuTimer(&CpuTimer0, 200, 1000);
 //    ConfigCpuTimer(&CpuTimer1, 200, 1000000);
 //    ConfigCpuTimer(&CpuTimer2, 200, 1000000);
 
@@ -80,6 +82,30 @@ uint16_t Get_SysTick(void)
 void Clr_SysTick(void)
 {
     u16Tick = 0;
+}
+
+#pragma CODE_SECTION(TMR0_Start,".TI.ramfunc");
+void TMR0_Start(void)
+{
+    tmr0_obj.Start_Flag = true;
+}
+
+#pragma CODE_SECTION(TMR0_Stop,".TI.ramfunc");
+void TMR0_Stop(void)
+{
+    tmr0_obj.Start_Flag = false;
+}
+
+#pragma CODE_SECTION(TMR0_SoftwareCounterClear,".TI.ramfunc");
+void TMR0_SoftwareCounterClear(void)
+{
+    tmr0_obj.count = 0;
+}
+
+#pragma CODE_SECTION(TMR0_SoftwareCounterGet,".TI.ramfunc");
+uint16_t TMR0_SoftwareCounterGet(void)
+{
+    return tmr0_obj.count;
 }
 
 #pragma CODE_SECTION(TMR1_Start,".TI.ramfunc");

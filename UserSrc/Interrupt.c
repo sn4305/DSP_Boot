@@ -6,11 +6,12 @@
  */
 
 #include <Interrupt.h>
+#include <SciStack/DLL/SCI_DLL.h>
 
 
 /** global variable, only be modified in CAN rx interrupt function and Timer.c */
 volatile uint16_t u16Tick = 0;
-extern TMR_OBJ tmr1_obj, tmr2_obj;
+extern TMR_OBJ tmr0_obj, tmr1_obj, tmr2_obj;
 
 /** global variable, only be modified in CAN rx interrupt function, and read by main state machine */
 volatile bool g_bCAN_RX_Flag = 0;
@@ -31,11 +32,15 @@ __interrupt void cpu_timer0_isr(void)
 
     u16Tick++;  /* for test */
 
-    if(tmr1_obj.Start_Flag)
-    {/* need consider u16TimTick overflow when use this*/
+    if(tmr0_obj.Start_Flag && tmr0_obj.count < 65535)
+    {
+        tmr0_obj.count++;
+    }
+    if(tmr1_obj.Start_Flag && tmr1_obj.count < 65535)
+    {
         tmr1_obj.count++;
     }
-    if(tmr2_obj.Start_Flag)
+    if(tmr2_obj.Start_Flag && tmr1_obj.count < 65535)
     {
         tmr2_obj.count++;
     }
@@ -180,4 +185,45 @@ canaISR(void)
     // Acknowledge this interrupt located in group 9
     //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
+}
+
+#pragma CODE_SECTION(ISR_SCIB_RX, ".TI.ramfunc");
+__interrupt void ISR_SCIB_RX(void)
+{
+   //Enable cpu_Timer0 interrupt nest
+
+     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+     IER |= M_INT1;
+     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+     __asm("  NOP");
+     __asm("  NOP");
+     EINT;
+#if (SCI_PRISEC_CONTROLLER == SCI_CON_B)
+     SCIB_RX_InterruptServiceRoutine();
+#endif
+     //
+     // Clear interrupt flag and issue ACK
+     //
+     ScibRegs.SCIFFRX.bit.RXFFINTCLR    =   1;   // Clear SCI Interrupt flag
+     PieCtrlRegs.PIEACK.bit.ACK9        =   1;
+}
+
+#pragma CODE_SECTION(ISR_SCIB_TX, ".TI.ramfunc");
+__interrupt void ISR_SCIB_TX(void)
+{
+    //Enable cpu_Timer0 interrupt nest
+     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+     IER |= M_INT1;
+     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+     __asm("  NOP");
+     __asm("  NOP");
+     EINT;
+#if (SCI_PRISEC_CONTROLLER == SCI_CON_B)
+     SCIB_TX_InterruptServiceRoutine();
+#endif
+     //
+     // Clear interrupt flag and issue ACK
+     //
+     ScibRegs.SCIFFTX.bit.TXFFINTCLR    =   1;   // Clear SCI Interrupt flag
+     PieCtrlRegs.PIEACK.bit.ACK9        =   1;
 }

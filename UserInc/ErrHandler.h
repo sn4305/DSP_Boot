@@ -30,11 +30,10 @@
 #define TIMEOUT                     0x11
 #define SAME_SN                     0x14            /**< Same sequence number of transferdata frame*/
 
-#ifdef DCDC
-#define MEMORY_AREA                     0x40        /**< Value of Memory Area for DCDC*/
-#else
-#define MEMORY_AREA                     0x20        /**< Value of Memory Area for OBC*/
-#endif
+
+#define SECD_MEMORY_AREA                0x20        /**< Value of Memory Area for OBC secondary DSP*/
+#define PRIM_MEMORY_AREA                0x30        /**< Value of Memory Area for OBC primary DSP*/
+
 
 #define HW_VERSION_ADDRESS              0x0C6004UL      /* Address of Hardware Version*/
 #define HW_VERSION_CRC                  0x0C6008UL      /**< Address of Hardware Version CRC*/

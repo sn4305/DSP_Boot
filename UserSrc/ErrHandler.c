@@ -7,6 +7,7 @@
 
 #include "ErrHandler.h"
 #include "CRC.h"
+#include "scicom.h"
 
 extern const uint16_t g_u40BootVersion[3];
 extern uint32_t g_u32UpdataFlag;
@@ -54,9 +55,7 @@ uint8_t IsLogisticValid(stCanMsgObj Received_Message)
     }
     else if(data0 != 0x21 && data0 != 0x22 &&
             data0 != 0x23 && data0 != 0x24 &&
-            data0 != 0x25 && data0 != 0x41 &&
-            data0 != 0x42 && data0 != 0x43 &&
-            data0 != 0x44 && data0 != 0x45)
+            data0 != 0x33 && data0 != 0x34)
     {
         error = ID_NOT_SUPPORTED;
     }
@@ -71,8 +70,8 @@ uint8_t IsSWVersionCheckValid(stCanMsgObj Received_Message)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(data0 != 0x23 && data0 != 0x43 &&
-            data0 != 0x24 && data0 != 0x44)
+    else if(data0 != 0x23 && data0 != 0x33 &&
+            data0 != 0x24 && data0 != 0x34)
     {
         error = ID_NOT_SUPPORTED;
     }
@@ -85,26 +84,33 @@ uint8_t IsSecurityValid(stCanMsgObj Received_Message)
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(*Received_Message.pu8MsgData != 0x20 && *Received_Message.pu8MsgData != 0x40)
+    else if(*Received_Message.pu8MsgData != 0x20 && *Received_Message.pu8MsgData != 0x30)
     {
         error = ID_NOT_SUPPORTED;
     }
     else
     {
-        bool IsKeyValid = (*(Received_Message.pu8MsgData+1) == 0x4D);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+2) == 0x41);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+3) == 0x52);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+4) == 0x54);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+5) == 0x45);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+6) == 0x4B);
-        IsKeyValid &= (*(Received_Message.pu8MsgData+7) == 0x30);
-        if (IsKeyValid)
-        {
-            error = NO_ERROR;
+        if(*Received_Message.pu8MsgData | 0xF0 == 0x20)
+        {/** unsecure secondary DSP*/
+            bool IsKeyValid = (*(Received_Message.pu8MsgData+1) == 0x4D);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+2) == 0x41);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+3) == 0x52);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+4) == 0x54);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+5) == 0x45);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+6) == 0x4B);
+            IsKeyValid &= (*(Received_Message.pu8MsgData+7) == 0x30);
+            if (IsKeyValid)
+            {
+                error = NO_ERROR;
+            }
+            else
+            {
+                error = WRONG_KEY;
+            }
         }
         else
-        {
-            error = WRONG_KEY;
+        {/** unsecure primary DSP*/
+            ;
         }
     }
     return error;
@@ -119,13 +125,12 @@ uint8_t IsEraseValid(stCanMsgObj Received_Message, bool bSecurityUnlocked)
         error = WRONG_REQUEST_FORMAT;
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
-            data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42 &&
-            data0 != 0x24 && data0 != 0x44)
+            data0 != 0x22 && data0 != 0x30 &&
+            data0 != 0x24 && data0 != 0x34)
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if(false == bSecurityUnlocked)
+    else if((data0 & 0xf0) == 0x20 && false == bSecurityUnlocked)
     {
         error = SECURITY_LOCKED;
     }
@@ -149,22 +154,22 @@ uint8_t IsTransferInfoValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(stBootFlag->bSecurityUnlocked != true)
+    else if(stBootFlag->bSecurityUnlocked != true &&
+            (data0 | 0xf0 == 0x20))
     {
         error = SECURITY_LOCKED;
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
-            data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42 &&
-            data0 != 0x24 && data0 != 0x44)
+            data0 != 0x22 && data0 != 0x30 &&
+            data0 != 0x24 && data0 != 0x34)
     {
         error = ID_NOT_SUPPORTED;
     }
-    else if( (((data0 & 0x0F) == 0) || ((data0 & 0x0F) == 4)) && (stBootFlag->bAppMemoryErase  != true) )
+    else if( ((data0  == 0x20) || (data0 == 0x24)) && (stBootFlag->bAppMemoryErase  != true) )
     {
         error = MEMORY_NOT_BLANK;
     }
-    else if( ((data0 & 0x0F) != 0) && ((data0 & 0x0F) != 4) && stBootFlag->bLogMemoryErase != true)
+    else if( ((data0  == 0x21) || (data0 == 0x22)) && stBootFlag->bLogMemoryErase != true)
     {
         error = MEMORY_NOT_BLANK;
     }
@@ -211,7 +216,7 @@ uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_
     {
         error = WRONG_REQUEST_FORMAT;
     }
-    else if(data0 == (pSt_TransDataInfo->pst_Data->u8SN - 1))
+    else if(data0 == (pSt_TransDataInfo->pst_Data->u8SN))
     {
         /* Same sequence number as previous frame: ignore the frame*/
         error = SAME_SN;
@@ -247,9 +252,8 @@ uint8_t IsCRCRequestValid(stCanMsgObj Received_Message)
         error = WRONG_REQUEST_FORMAT;
     }
     else if(data0 != 0x20 && data0 != 0x21 &&
-            data0 != 0x22 && data0 != 0x40 &&
-            data0 != 0x41 && data0 != 0x42 &&
-            data0 != 0x24 && data0 != 0x44)
+            data0 != 0x22 && data0 != 0x30 &&
+            data0 != 0x24 && data0 != 0x34)
     {
         error = ID_NOT_SUPPORTED;
     }
@@ -264,7 +268,7 @@ void LogiticRequestHandle(uint8_t Identifier)
 {
     switch(Identifier)
     {
-        case MEMORY_AREA + 1:
+        case SECD_MEMORY_AREA + 1:
         {
             uint16_t CRCCalc;
             /*Version Number*/
@@ -288,7 +292,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             break;
         }
 
-        case MEMORY_AREA + 2:
+        case SECD_MEMORY_AREA + 2:
         {
             uint16_t CRCCalc;
             /* Serial Number*/
@@ -317,7 +321,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             break;
         }
 
-        case MEMORY_AREA + 3:
+        case SECD_MEMORY_AREA + 3:
         {
             /*Read PN Number*/
             uint8_t Data[5];
@@ -333,7 +337,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             break;
         }
 
-        case MEMORY_AREA + 4:
+        case SECD_MEMORY_AREA + 4:
         {
             /*Read Application PN Number*/
 
@@ -349,7 +353,7 @@ void LogiticRequestHandle(uint8_t Identifier)
             break;
         }
 
-        case MEMORY_AREA + 5:
+        case SECD_MEMORY_AREA + 5:
             /* OBC Primary SW PN, Not used in Bootloader*/
         default:
             /* Do Nothing
@@ -366,43 +370,57 @@ void SWVersionComparetHandle(stCanMsgObj Received_Message, MyBootSys *Info, pSt_
     uint8_t ActualVersion[5];
     uint8_t *data = (uint8_t *)(Received_Message.pu8MsgData);
 
-    if((*data & 0x0F) == 4)
+    RespMemArea = *data & 0xF0;
+    switch(RespMemArea)
     {
-        PN_Addr = Info->BootPNAddr;
-        RespMemArea = (MEMORY_AREA|0x04);
-    }
-    else
-    {
-        PN_Addr = APP_VERSION_ADDRESS;
-        RespMemArea = (MEMORY_AREA|0x03);
+        case SECD_MEMORY_AREA:
+            if((*data & 0x0F) == 4)
+            {
+                PN_Addr = Info->BootPNAddr;
+                RespMemArea = *data;
+            }
+            else if((*data & 0x0F) == 3)
+            {
+                PN_Addr = APP_VERSION_ADDRESS;
+                RespMemArea = *data;
+            }
+
+            DiffErr = 0;
+            pVer = (uint16_t *)PN_Addr;
+
+            ActualVersion[0] = (uint8_t)(*pVer >> 8) & 0xFF;
+            ActualVersion[1] = (uint8_t)(*pVer++) & 0xFF;
+            ActualVersion[2] = (uint8_t)(*pVer >> 8) & 0xFF;
+            ActualVersion[3] = (uint8_t)(*pVer++) & 0xFF;
+            ActualVersion[4] = (uint8_t)(*pVer >> 8) & 0xFF;
+
+            data++;
+            for(i = 0; i < 5; i++)
+            {
+                if (ActualVersion[i] != *data++)
+                {
+                    DiffErr ++;
+                }
+            }
+            if(DiffErr)
+            {
+                ptr_st_BootFlag->bFlashAuthorization = true;
+            }
+            else
+            {
+                ptr_st_BootFlag->bFlashAuthorization = false;
+            }
+            SendLogisticResponse(RespMemArea, ActualVersion, 5);
+            break;
+
+        case PRIM_MEMORY_AREA:
+            SCI_Send_Cmd(SCI_SWVersionCheck, data, 6);
+            break;
+
+        default:
+            break;
     }
 
-    DiffErr = 0;
-    pVer = (uint16_t *)PN_Addr;
-
-    ActualVersion[0] = (uint8_t)(*pVer >> 8) & 0xFF;
-    ActualVersion[1] = (uint8_t)(*pVer++) & 0xFF;
-    ActualVersion[2] = (uint8_t)(*pVer >> 8) & 0xFF;
-    ActualVersion[3] = (uint8_t)(*pVer++) & 0xFF;
-    ActualVersion[4] = (uint8_t)(*pVer >> 8) & 0xFF;
-
-    data++;
-    for(i = 0; i < 5; i++)
-    {
-        if (ActualVersion[i] != *data++)
-        {
-            DiffErr ++;
-        }
-    }
-    if(DiffErr)
-    {
-        ptr_st_BootFlag->bFlashAuthorization = true;
-    }
-    else
-    {
-        ptr_st_BootFlag->bFlashAuthorization = false;
-    }
-    SendLogisticResponse(RespMemArea, ActualVersion, 5);
 }
 
 bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
@@ -416,7 +434,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
         {
             /* Writing in Bootloader area*/
             ReturnValue = false;
-            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+            SendGenericResponse(SECD_MEMORY_AREA, WRITING_INVALID);
         }
         else
         {
@@ -436,7 +454,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
         if (Address < Info->OppositBootStartAddr || Address > Info->OppositBootEndAddr)
         {
             ReturnValue = false;
-            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+            SendGenericResponse(SECD_MEMORY_AREA, WRITING_INVALID);
         }
         else
         {
@@ -473,7 +491,7 @@ bool CheckWritingAddress(uint32_t Address, uint8_t MemoryArea, MyBootSys *Info)
         {
             /*Writing before or after last page*/
             ReturnValue = false;
-            SendGenericResponse(MEMORY_AREA, WRITING_INVALID);
+            SendGenericResponse(SECD_MEMORY_AREA, WRITING_INVALID);
         }
         else
         {
@@ -512,7 +530,7 @@ void CRCWrite(stCanMsgObj ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *s
     {
         ServiceDog();
         /*Send OK response */
-        SendGenericResponse(MEMORY_AREA, NO_ERROR);
+        SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
 
         if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 4)
         {
@@ -552,15 +570,12 @@ void CRCWrite(stCanMsgObj ReceivedMessage, MyBootSys *BootStatus, St_BootFlag *s
             ServiceDog();
         }
         stBootFlag->bAppMemoryErase = false;
-//        DisableDog();
-//        DELAY_US(200000L);
         DEADLOOP();     /**< use dead loop trigger watch dog reset*/
-        RESET();        /**< will never go to here*/
     }
     else
     {
         /*Wrong CRC*/
-        SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+        SendGenericResponse(SECD_MEMORY_AREA, WRONG_CRC);
     }
 
 }
@@ -592,12 +607,12 @@ void LogisticCRCWrite(stCanMsgObj ReceivedMessage)
             SwitchBank(1);
             WriteFlash(HW_VERSION_ADDRESS, DataForCRC, 5);
             ReleaseFlashPump();
-            SendGenericResponse(MEMORY_AREA, NO_ERROR);
+            SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
         }
         else
         {
             /*Wrong CRC*/
-            SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+            SendGenericResponse(SECD_MEMORY_AREA, WRONG_CRC);
         }
     }
     else if((ReceivedMessage.pu8MsgData[0] & 0x0F) == 2)
@@ -629,12 +644,12 @@ void LogisticCRCWrite(stCanMsgObj ReceivedMessage)
             /* Correct CRC : save CRC*/
             SeizeFlashPump_Bank1();
             WriteFlash(HW_SERIAL_NUMBER_ADDRESS, DataForCRC, 5);
-            SendGenericResponse(MEMORY_AREA, NO_ERROR);
+            SendGenericResponse(SECD_MEMORY_AREA, NO_ERROR);
         }
         else
         {
             /*Wrong CRC*/
-            SendGenericResponse(MEMORY_AREA, WRONG_CRC);
+            SendGenericResponse(SECD_MEMORY_AREA, WRONG_CRC);
         }
     }
 }
