@@ -55,6 +55,8 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
     Uint16 pu16DataTmp[8] = {0};
     stTplTxMsg.pu16Data = pu16DataTmp;
     stTplTxMsg.u16MsgId = u16MsgId;
+
+    TMR0_SoftwareCounterClear();
     switch(u16MsgId)
     {
     case SCI_EraseMemory:
@@ -106,7 +108,7 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
     case SCI_ModeRequest:
         pu16DataTmp[2] = (uint16_t)BOOT_MODE<<8;
         stTplTxMsg.u16MsgLen = 4;
-//        g_bSCI_TX_Flag = true;
+        g_bSCI_TX_Flag = true;
         SCI_TPL_Send(&stTplTxMsg);
         break;
     default:

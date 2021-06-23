@@ -29,14 +29,14 @@
 #define SCI_ModeRequest                     0xE7
 
 /*SCI timeout, unit: 1ms */
-#define SCI_TIMOUT_EraseMemory              100U
-#define SCI_TIMOUT_TransferInformation      5U
-#define SCI_TIMOUT_TransferData             5U
-#define SCI_TIMOUT_CRCRequest               200U
-#define SCI_TIMOUT_SecurityAccess           5U
-#define SCI_TIMOUT_LogisticRequest          5U
-#define SCI_TIMOUT_SWVersionCheck           5U
-#define SCI_TIMOUT_ModeRequest              20U
+#define SCI_TIMOUT_EraseMemory              200U
+#define SCI_TIMOUT_TransferInformation      40U
+#define SCI_TIMOUT_TransferData             150U
+#define SCI_TIMOUT_CRCRequest               250U
+#define SCI_TIMOUT_SecurityAccess           40U
+#define SCI_TIMOUT_LogisticRequest          40U
+#define SCI_TIMOUT_SWVersionCheck           40U
+#define SCI_TIMOUT_ModeRequest              40U
 
 typedef struct
 {

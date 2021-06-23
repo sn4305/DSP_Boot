@@ -186,7 +186,7 @@ uint32_t main(void)
     *   ||========================================================||  */
     while (1)
     {
-//        BSW_SVC_SCI_Main_Task2ms();
+        SCI_TPL_ErrHandle();
         switch (s_stState)
         {
     /*  ||========================================================||
@@ -423,6 +423,7 @@ uint32_t main(void)
                             else if(PRIM_MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0))
                             {
                                 /* forward Erase primary DSP command to primary by SCI*/
+                                s_stTransDataInfo.u8MemArea = g_stRXCANMsg.pu8MsgData[0];
                                 SCI_Send_Cmd(SCI_TransferInformation, (uint8_t *)g_stRXCANMsg.pu8MsgData, 8);
                             }
                             break;
@@ -473,7 +474,7 @@ uint32_t main(void)
                                     }
                                 }
                             }
-                            else if(PRIM_MEMORY_AREA == (g_stRXCANMsg.pu8MsgData[0] & 0xF0))
+                            else if(PRIM_MEMORY_AREA == (s_stTransDataInfo.u8MemArea & 0xF0))
                             {
                                 /* forward Erase primary DSP command to primary by SCI*/
                                 SCI_Send_Cmd(SCI_TransferData, (uint8_t *)g_stRXCANMsg.pu8MsgData, 8);
@@ -578,7 +579,7 @@ uint32_t main(void)
                             else
                             {
                                 g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
-                                SendGenericResponse(PRIM_MEMORY_AREA, TIMEOUT);  /* send timeout error by CAN.*/
+//                                SendGenericResponse(PRIM_MEMORY_AREA, TIMEOUT);  /* send timeout error by CAN.*/
                                 TMR0_Stop();
                                 TMR0_SoftwareCounterClear();
                             }
@@ -606,7 +607,7 @@ uint32_t main(void)
                             else
                             {
                                 g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
-                                SendGenericResponse(PRIM_MEMORY_AREA, TIMEOUT);  /* send timeout error by CAN.*/
+//                                SendGenericResponse(PRIM_MEMORY_AREA, TIMEOUT);  /* send timeout error by CAN.*/
                                 TMR0_Stop();
                                 TMR0_SoftwareCounterClear();
                             }
@@ -686,7 +687,7 @@ uint32_t main(void)
                             break;
 
                         case SCI_SWVersionCheck:
-                            if(TMR0_SoftwareCounterGet() <= SCI_TIMOUT_SWVersionCheck*2000)
+                            if(TMR0_SoftwareCounterGet() <= SCI_TIMOUT_SWVersionCheck)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
@@ -728,6 +729,27 @@ uint32_t main(void)
                             break;
 
                         case SCI_ModeRequest:
+                            if(TMR0_SoftwareCounterGet() <= SCI_TIMOUT_ModeRequest)
+                            {
+                                if(SCI_TPL_Receive(&stTplRxMsg) == true)
+                                {
+//                                    TMR0_Stop();
+//                                    TMR0_SoftwareCounterClear();
+                                    /* Clear SCI Stack RX buffer, avoid unwanted data from app.*/
+                                }
+                                else
+                                {/* SCI Stack RX buffer is empty now. */
+                                    g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
+                                    TMR0_Stop();
+                                    TMR0_SoftwareCounterClear();
+                                }
+                            }
+                            else
+                            {
+                                g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
+                                TMR0_Stop();
+                                TMR0_SoftwareCounterClear();
+                            }
                             break;
 
                         default:
