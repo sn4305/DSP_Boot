@@ -16,7 +16,7 @@ typedef struct _TMR_OBJ_STRUCT
     /** Timer Elapsed */
     bool         Start_Flag;
     /** Software Counter value*/
-    uint16_t     count;
+    volatile uint16_t     count;
 } TMR_OBJ;
 
 /** Initiate Timer. Include clock, Timer INT, ISR.

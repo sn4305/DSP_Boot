@@ -36,6 +36,9 @@ St_BootFlag s_stBootFlag = {false, false, false, false};            /**< state f
 static uint8_t s_u8RecvBuf[MAX_BLOCK_SIZE + CRC_LENGTH] = {0};      /**< Data block receive buffer, used to receive data from CAN and copy to flash*/
 static St_TransData s_stTransData = {0, s_u8RecvBuf, 0};            /**< Data struct used in CMD_TransferData*/
 static St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};       /**< Data struct used in CMD_TransferInformation*/
+static Uint16 pu16DataTmp[8] = {0};
+static stTplMsg_t stTplRxMsg = {0, 0, (Uint16 *)pu16DataTmp};
+
 
 /* function declaration */
 static void TreatData(volatile uint8_t* Received_Message, St_TransDataInfo *pSt_TransDataInfo);
@@ -200,7 +203,6 @@ uint32_t main(void)
                     TMR1_Start();
                     TMR1_SoftwareCounterClear();
                     SCI_Send_Cmd(SCI_ModeRequest, NULL, 8);
-                    SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                     s_stState = State_BOOT; /* <====== GO BOOT   */
                 }
                 else if(TMR1_SoftwareCounterGet() < BOOT_DELAY)
@@ -210,11 +212,11 @@ uint32_t main(void)
                         Clr_CanRxFlag();
                         if(CMD_ModeRequest == g_enumCAN_Command)
                         {
-                            if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
+                            if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[6] & 0x07))
                             {
                                 g_u32UpdataFlag = UPDATE_APP_RQST;
                                 SCI_Send_Cmd(SCI_ModeRequest, NULL, 8);
-                                SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
+//                                SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                                 s_stState = State_BOOT; /* <====== GO BOOT  */
                             }
                         }
@@ -232,7 +234,7 @@ uint32_t main(void)
                 {
                     TMR1_Stop();
                     TMR1_SoftwareCounterClear();
-                    SendDiagnosticResponse(DEFAULT_MODE, s_u16AddrCfg);
+//                    SendDiagnosticResponse(DEFAULT_MODE, s_u16AddrCfg);
                     s_stState = State_DEFAULT; /* <====== GO DEFAULT  */
                 }
                 break;
@@ -247,14 +249,14 @@ uint32_t main(void)
                     Clr_CanRxFlag();
                     if(CMD_ModeRequest == g_enumCAN_Command)
                     {
-                        if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
+                        if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[6] & 0x07))
                         {
                             g_u32UpdataFlag = UPDATE_APP_RQST;
                             SCI_Send_Cmd(SCI_ModeRequest, NULL, 8);
-                            SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
+//                            SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                             s_stState = State_BOOT; /* <====== GO BOOT  */
                         }
-                        else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
+                        else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[6] & 0x07))
                         {
                             g_u32UpdataFlag = 0;
                             DEADLOOP();     /**< use dead loop trigger watch dog reset*/
@@ -295,20 +297,17 @@ uint32_t main(void)
                             }
                             else
                             {
-                                if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
+                                if(BOOT_MODE == (g_stRXCANMsg.pu8MsgData[6] & 0x07))
                                 {/* Enter boot mode request : Send positive Response
                                  * No Action*/
                                     Init_TransParam();
                                     SCI_Send_Cmd(SCI_ModeRequest, NULL, 8);
-                                    SendDiagnosticResponse(BOOT_MODE, s_u16AddrCfg);
                                 }
-                                else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[4] & 0x07))
+                                else if(DEFAULT_MODE == (g_stRXCANMsg.pu8MsgData[6] & 0x07))
                                 {
                                     /* Reset to preboot*/
                                     g_u32UpdataFlag = 0;
                                     Init_BootFlag();
-//                                    DisableDog();
-//                                    DELAY_US(200000L);
                                     DEADLOOP();     /**< use dead loop trigger watch dog reset*/
                                 }
                                 else
@@ -404,7 +403,7 @@ uint32_t main(void)
                                 else
                                 {
                                     /* Correct Memory area*/
-                                    if (g_stRXCANMsg.pu8MsgData[1] != (uint8_t) (s_stTransDataInfo.u8BSC + 1))
+                                    if (g_stRXCANMsg.pu8MsgData[1] != (uint8_t) ((s_stTransDataInfo.u8BSC + 1) & 0xFF))
                                     {
                                         /* Problem in u8BSC*/
                                         SendGenericResponse(SECD_MEMORY_AREA, WRONG_REQUEST_FORMAT);
@@ -524,7 +523,7 @@ uint32_t main(void)
 
                 if(g_bSCI_TX_Flag)
                 {/* If SCI frame is transmitted, then waiting reply*/
-                    stTplMsg_t stTplRxMsg;
+
                     TMR0_Start();
 
                     switch(g_u16SCIMsgId)
@@ -534,13 +533,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     default:
@@ -562,13 +561,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received negative general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     default:
@@ -590,13 +589,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     default:
@@ -618,13 +617,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     default:
@@ -646,13 +645,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     default:
@@ -691,13 +690,13 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
                                     switch(stTplRxMsg.u16MsgId)
                                     {
                                     case SCI_GENERAL_RESP:
                                         /*received negative general_response*/
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         SendGenericResponse((uint8_t)(stTplRxMsg.pu16Data[0]), (uint8_t)stTplRxMsg.pu16Data[1]);
                                         break;
                                     case SCI_LOGI_RESP:
@@ -705,7 +704,8 @@ uint32_t main(void)
                                         /*received positive logistic_response*/
                                         uint8_t ActualVersion[5];
                                         g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
-
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
                                         ActualVersion[0] = (uint8_t)(stTplRxMsg.pu16Data[1]);
                                         ActualVersion[1] = (uint8_t)(stTplRxMsg.pu16Data[2]);
                                         ActualVersion[2] = (uint8_t)(stTplRxMsg.pu16Data[3]);
@@ -733,15 +733,30 @@ uint32_t main(void)
                             {
                                 if(SCI_TPL_Receive(&stTplRxMsg) == true)
                                 {
-//                                    TMR0_Stop();
-//                                    TMR0_SoftwareCounterClear();
-                                    /* Clear SCI Stack RX buffer, avoid unwanted data from app.*/
+                                    switch(stTplRxMsg.u16MsgId)
+                                    {
+                                    case SCI_DIAG_SESSION:
+                                        g_bSCI_TX_Flag = false;         /* stop receiving, already received.*/
+                                        TMR0_Stop();
+                                        TMR0_SoftwareCounterClear();
+                                        if(0xC0 == stTplRxMsg.pu16Data[4])
+                                        {
+                                            /*received positive general_response*/
+                                            SendDiagnosticResponse(BOTH_BOOT_STATE, s_u16AddrCfg);
+                                        }
+                                        else
+                                        {
+                                            /*received negative general_response*/
+                                            SendDiagnosticResponse(ONLY_SEC_BOOT_STATE, s_u16AddrCfg);
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                    }
                                 }
                                 else
                                 {/* SCI Stack RX buffer is empty now. */
-                                    g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
-                                    TMR0_Stop();
-                                    TMR0_SoftwareCounterClear();
+                                    ;
                                 }
                             }
                             else
@@ -749,6 +764,7 @@ uint32_t main(void)
                                 g_bSCI_TX_Flag = false;         /* stop receiving, timeout error occurred.*/
                                 TMR0_Stop();
                                 TMR0_SoftwareCounterClear();
+                                SendDiagnosticResponse(ONLY_SEC_BOOT_STATE, s_u16AddrCfg);
                             }
                             break;
 

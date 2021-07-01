@@ -36,7 +36,7 @@
 #define SCI_TIMOUT_SecurityAccess           40U
 #define SCI_TIMOUT_LogisticRequest          40U
 #define SCI_TIMOUT_SWVersionCheck           40U
-#define SCI_TIMOUT_ModeRequest              40U
+#define SCI_TIMOUT_ModeRequest              150U
 
 typedef struct
 {

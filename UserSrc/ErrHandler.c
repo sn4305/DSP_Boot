@@ -199,7 +199,7 @@ uint8_t IsTransferDataValid(stCanMsgObj Received_Message, St_TransDataInfo *pSt_
     uint8_t error = NO_ERROR;
     uint8_t data0 = *(Received_Message.pu8MsgData);
 
-    if(TMR2_SoftwareCounterGet() >= 5)
+    if(TMR2_SoftwareCounterGet() >= CAN_DATA_FRAME_OVERTIME)
     {
         /*50ms Timeout*/
         error = TIMEOUT;

@@ -10,6 +10,7 @@
 #include "Timer.h"
 #include <SciStack/APL/SCI_APL.h>
 
+//#define  __DEBUG__
 
 /*************************************************************************
 **    global functions
@@ -18,6 +19,8 @@ ST_SEC2PRI_COM_TX_OBJ g_stSec2PriTxObj;
 ST_PRI2SEC_COM_RX_OBJ g_stPri2SecRxObj;
 bool g_bSCI_TX_Flag = false;
 Uint16 g_u16SCIMsgId;
+static Uint16 pu16DataTmp[8] = {0};
+static stTplMsg_t stTplTxMsg = {0, 0, (Uint16 *)pu16DataTmp};
 
 extern __interrupt void ISR_SCIB_RX(void);      /**< Defined in interrupt.c*/
 extern __interrupt void ISR_SCIB_TX(void);      /**< Defined in interrupt.c*/
@@ -51,12 +54,9 @@ void SCI_Init(void)
 void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
 {
     g_u16SCIMsgId = u16MsgId;
-    stTplMsg_t stTplTxMsg;
-    Uint16 pu16DataTmp[8] = {0};
-    stTplTxMsg.pu16Data = pu16DataTmp;
     stTplTxMsg.u16MsgId = u16MsgId;
 
-    TMR0_SoftwareCounterClear();
+//    TMR0_SoftwareCounterClear();
     switch(u16MsgId)
     {
     case SCI_EraseMemory:
@@ -106,12 +106,13 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
         }
         break;
     case SCI_ModeRequest:
-        pu16DataTmp[2] = (uint16_t)BOOT_MODE<<8;
+        pu16DataTmp[3] = (uint16_t)BOOT_MODE<<8;
         stTplTxMsg.u16MsgLen = 4;
         g_bSCI_TX_Flag = true;
         SCI_TPL_Send(&stTplTxMsg);
         break;
     default:
+
         break;
     }
 

@@ -33,7 +33,8 @@
 #ifdef DCDC
 #define ModeRequest                    0x4D3FF01   /* Receivec CAN ID for mode request for DCDC*/
 #else
-#define ModeRequest                    0x4D0FF01        /**< Received CAN ID for OBC mode request*/
+//#define ModeRequest                    0x4D0FF01        /**< Received CAN ID for OBC mode request*/
+#define ModeRequest                    0x4D0A001        /**< Received CAN ID for OBC mode request*/
 #endif
 
 /** CAN mail box ID */
@@ -55,9 +56,11 @@
 #define ID_TX_OBJ_END                  18
 
 /* Mode definition*/
-#define DEFAULT_MODE                   6            /**< Used for goto default mode*/
-#define BOOT_MODE                      5            /**< Used for goto Boot mode*/
+#define DEFAULT_MODE                   2            /**< Used for goto default mode*/
+#define BOOT_MODE                      7            /**< Used for goto Boot mode*/
 #define DIAGNOSTICSESSION              3            /**< Used for goto Diagnostic session*/
+#define BOTH_BOOT_STATE                3U           /**< 0b11*/
+#define ONLY_SEC_BOOT_STATE            1U           /**< 0b01*/
 
 /** Enum used to Indicate subsystem state of Boot. */
 typedef enum {

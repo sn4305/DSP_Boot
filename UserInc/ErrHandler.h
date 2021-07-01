@@ -34,6 +34,7 @@
 #define SECD_MEMORY_AREA                0x20        /**< Value of Memory Area for OBC secondary DSP*/
 #define PRIM_MEMORY_AREA                0x30        /**< Value of Memory Area for OBC primary DSP*/
 
+#define CAN_DATA_FRAME_OVERTIME         50U
 
 #define HW_VERSION_ADDRESS              0x0C6004UL      /* Address of Hardware Version*/
 #define HW_VERSION_CRC                  0x0C6008UL      /**< Address of Hardware Version CRC*/

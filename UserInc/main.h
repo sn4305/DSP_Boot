@@ -46,7 +46,7 @@
  ******************************************************************/
 #define UPDATE_APP_RQST                 0xC0DEFEED
 
-#define BOOT_DELAY                      200U        /**< delay 200ms then jump to Application*/
+#define BOOT_DELAY                      480U        /**< delay 200ms then jump to Application*/
 #define BOOT_TIMEOUT                    5000U        /**< wait 5s if no cmd from gateway in boot mode*/
 
 #define UPDATE_APP_RQST                 0xC0DEFEED
