@@ -63,6 +63,8 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
         pu16DataTmp[0] = (uint16_t)data[0]<<8;
         stTplTxMsg.u16MsgLen = 1;
         g_bSCI_TX_Flag = true;
+        TMR0_Start();
+        TMR0_SoftwareCounterClear();
         SCI_TPL_Send(&stTplTxMsg);
         break;
     case SCI_SecurityAccess:
@@ -76,6 +78,8 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
             pu16DataTmp[3] = (uint16_t)data[6]<<8 | data[7];
             stTplTxMsg.u16MsgLen = 4;
             g_bSCI_TX_Flag = true;
+            TMR0_Start();
+            TMR0_SoftwareCounterClear();
             SCI_TPL_Send(&stTplTxMsg);
         }
         break;
@@ -86,6 +90,8 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
             pu16DataTmp[1] = (uint16_t)data[2]<<8;
             stTplTxMsg.u16MsgLen = 2;
             g_bSCI_TX_Flag = true;
+            TMR0_Start();
+            TMR0_SoftwareCounterClear();
             SCI_TPL_Send(&stTplTxMsg);
         }
         break;
@@ -102,6 +108,8 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
             pu16DataTmp[2] = (uint16_t)data[4]<<8 | data[5];
             stTplTxMsg.u16MsgLen = 3;
             g_bSCI_TX_Flag = true;
+            TMR0_Start();
+            TMR0_SoftwareCounterClear();
             SCI_TPL_Send(&stTplTxMsg);
         }
         break;
@@ -109,6 +117,7 @@ void SCI_Send_Cmd(Uint16 u16MsgId, uint8_t *data, uint8_t len)
         pu16DataTmp[3] = (uint16_t)BOOT_MODE<<8;
         stTplTxMsg.u16MsgLen = 4;
         g_bSCI_TX_Flag = true;
+        TMR0_Start();
         SCI_TPL_Send(&stTplTxMsg);
         break;
     default:

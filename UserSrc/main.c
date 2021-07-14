@@ -38,6 +38,9 @@ static St_TransData s_stTransData = {0, s_u8RecvBuf, 0};            /**< Data st
 static St_TransDataInfo s_stTransDataInfo = {0, 0, 0, 0, 0, &s_stTransData};       /**< Data struct used in CMD_TransferInformation*/
 static Uint16 pu16DataTmp[8] = {0};
 static stTplMsg_t stTplRxMsg = {0, 0, (Uint16 *)pu16DataTmp};
+#pragma DATA_SECTION(g_u40BootVersion,".boot_ver");
+/*bootloader SW version, need update this every time update boot SW, otherwise the CMD_SWVersionCheck will failed*/
+const uint16_t g_u40BootVersion[3] = {U16_SW_VER_1, U16_SW_VER_2, U16_SW_VER_3};
 
 
 /* function declaration */
@@ -64,11 +67,12 @@ uint32_t MainBoot(void);
 #pragma CODE_SECTION(main,".preboot");
 uint32_t main(void)
 {//Pre boot sequence
+    exitboot = (pExitBoot)EXIT_FUNC_ADDR;
    if(boot_even_flag == BOOT_EVEN_VALID)
    {
-       if(0x0 == g_u40BootVersion[0]
-          && 0x0 == g_u40BootVersion[1]
-          && 0x0 == g_u40BootVersion[2])
+       if(_DEFINE_PREBOOT_VER == g_u40BootVersion[0]
+          && _DEFINE_PREBOOT_VER == g_u40BootVersion[1]
+          && _DEFINE_PREBOOT_VER == g_u40BootVersion[2])
        {
            /* if it is init Boot0, then jump to Mainboot*/
            MainBoot();
@@ -523,8 +527,6 @@ uint32_t main(void)
 
                 if(g_bSCI_TX_Flag)
                 {/* If SCI frame is transmitted, then waiting reply*/
-
-                    TMR0_Start();
 
                     switch(g_u16SCIMsgId)
                     {

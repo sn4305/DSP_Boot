@@ -138,7 +138,7 @@ SECTIONS
    .preboot_code: {  -l rts2800_fpu32.lib(.text) }    > FLASHA     PAGE = 0, ALIGN(4)
    .preboot_cinit: {  -l rts2800_fpu32.lib(.cinit) }  > FLASHA      PAGE = 0, ALIGN(4)
    .text               : >> text_sector     PAGE = 0, ALIGN(4)
-   .cinit              : > init_sector      PAGE = 0, ALIGN(4)
+   .cinit              : > FLASHA      		PAGE = 0, ALIGN(4)
    .pinit              : > init_sector      PAGE = 0, ALIGN(4)
       /* Initalized sections go in Flash */
    .econst             : > init_sector      PAGE = 0, ALIGN(4)
