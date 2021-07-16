@@ -232,6 +232,14 @@ uint32_t main(void)
                     TMR1_SoftwareCounterClear();
                     DisableDog();
                     DELAY_US(200000L);
+                    /* Init CAN and SCI*/
+                    HWREGH(CANA_BASE + CAN_O_CTL) = CAN_CTL_INIT;
+                    SciaRegs.SCICTL1.bit.SWRESET        = 0;
+                    /* Disable interruption and clear INT Flag*/
+                    DINT;
+                    IER = 0x0000;
+                    IFR = 0x0000;
+
                     StartApplication();
                 }
                 else
